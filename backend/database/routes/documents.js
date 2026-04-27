@@ -45,6 +45,29 @@ router.patch('/:doc_id/status', async (req, res, next) => {
     }
 });
 
+router.post('/:doc_id/context', async (req, res, next) => {
+    try {
+        const { summary, keywords } = req.body;
+        const data = await documentsService.upsertContext(
+            req.params.doc_id,
+            summary,
+            keywords
+        );
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.get('/:doc_id/context', async (req, res, next) => {
+    try {
+        const data = await documentsService.getContext(req.params.doc_id);
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+});
+
 // GET /db/documents/hash/:hash
 router.get('/hash/:hash', async (req, res, next) => {
     try {

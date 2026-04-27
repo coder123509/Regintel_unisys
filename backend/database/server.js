@@ -3,6 +3,7 @@ import cors from 'cors';
 import { query } from './config/db.js';
 
 import documentsRoutes from './routes/documents.js';
+import clausesRoutes from './routes/clauses.js';
 
 const app = express();   // ← THIS must come first
 
@@ -10,6 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/db/documents', documentsRoutes);
+app.use('/db', clausesRoutes);
 
 app.get('/test-db', async (req, res) => {
     try {

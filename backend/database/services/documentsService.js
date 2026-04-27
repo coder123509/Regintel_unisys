@@ -29,14 +29,14 @@ export const createDocument = async (data) => {
 //LIST - only metadata
 export const getDocuments =  async ({ status, limit, offset }) => {
     let baseQuery = `
-    SELECT doc_id, source_id, source_url, published_at, ingested_at status
+    SELECT doc_id, source_id, source_url, published_at, ingested_at, status
     FROM documents
     `;
 
     const params = [];
     if (status) {
         params.push(status);
-        baseQuery += `WHERE status = $${params.length}`;
+        baseQuery += ` WHERE status = $${params.length}`;
     }
 
     params.push(limit , offset);
@@ -85,4 +85,31 @@ export const checkHash = async (hash) => {
         exists: result.rows.length > 0,
         doc_id: result.rows[0]?.doc_id
     };
+};
+
+//context
+export const upsertContext = async (doc_id, summary, keywords) => {
+    const result = await query(
+        `INSERT INTO document_context (doc_id, summary, keywords)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (doc_id)
+         DO UPDATE SET
+            summary = EXCLUDED.summary,
+            keywords = EXCLUDED.keywords,
+            created_at = NOW()
+         RETURNING *`,
+        [doc_id, summary, keywords]
+    );
+
+    return result.rows[0];
+};
+
+//get context
+export const getContext = async (doc_id) => {
+    const result = await query(
+        `SELECT * FROM document_context WHERE doc_id = $1`,
+        [doc_id]
+    );
+
+    return result.rows[0] || null;
 };

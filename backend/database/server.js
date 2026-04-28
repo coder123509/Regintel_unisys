@@ -6,6 +6,7 @@ import documentsRoutes from './routes/documents.js';
 import clausesRoutes from './routes/clauses.js';
 import mappingsRoutes from './routes/mappings.js';
 import riskRoutes from './routes/risks.js';
+import actionsRoutes from './routes/actions.js';
 
 const app = express();   // ← THIS must come first
 
@@ -16,6 +17,7 @@ app.use('/db/documents', documentsRoutes);
 app.use('/db', clausesRoutes);
 app.use('/db', mappingsRoutes);
 app.use('/db', riskRoutes);
+app.use('/db', actionsRoutes);
 
 app.get('/test-db', async (req, res) => {
     try {

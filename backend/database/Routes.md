@@ -1,5 +1,15 @@
 # RegIntel API Documentation
 
+## ALL STATUS
+```
+CREATE TYPE document_status AS ENUM ('ingesting', 'processed', 'failed', 'duplicate');
+CREATE TYPE clause_type AS ENUM ('obligation', 'prohibition', 'permission');
+CREATE TYPE mapping_status AS ENUM ('pending', 'completed', 'failed', 'partial');
+CREATE TYPE priority_level AS ENUM ('low', 'medium', 'high');
+CREATE TYPE action_type AS ENUM ('policy_update', 'alert', 'audit', 'checklist');
+CREATE TYPE action_status AS ENUM ('pending', 'in_progress', 'done');
+```
+
 ## 1. Documents
 
 ### POST /db/documents
@@ -212,3 +222,59 @@ OUTPUTS all clauses:
     }
 ]
 ```
+
+## 8. Action summary
+### POST /db/actions/bulk
+```
+{
+  "doc_id": "doc_1",
+  "actions": [
+    {
+      "clause_id": "doc_1:c1",
+      "action_text": "Update liquidity policy",
+      "action_type": "policy_update",
+      "department": "Risk"
+    },
+    {
+      "clause_id": "doc_1:c2",
+      "action_text": "Trigger compliance audit",
+      "action_type": "audit",
+      "department": "Compliance"
+    }
+  ]
+}
+```
+OUTPUT
+```
+{
+    "success": true,
+    "inserted": 2
+}
+```
+### GET /db/actions/{doc_id}
+OUTPUT
+```
+[
+    {
+        "action_id": "e28f6e60-2ef9-4f63-9f36-5d7e4dd3a19c",
+        "doc_id": "doc_1",
+        "clause_id": "doc_1:c1",
+        "action_text": "Update liquidity policy",
+        "action_type": "policy_update",
+        "department": "Risk",
+        "status": "pending",
+        "generated_at": "2026-04-28T13:22:18.777Z"
+    },
+    {
+        "action_id": "4ab25bef-ff13-4681-ac53-78c2450ed45a",
+        "doc_id": "doc_1",
+        "clause_id": "doc_1:c2",
+        "action_text": "Trigger compliance audit",
+        "action_type": "audit",
+        "department": "Compliance",
+        "status": "pending",
+        "generated_at": "2026-04-28T13:22:18.777Z"
+    }
+]
+```
+### PATCH /db/actions/{action_id}/status

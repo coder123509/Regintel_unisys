@@ -151,3 +151,64 @@ Response:
   "status": "completed"
 }
 ```
+
+## 7. Risk Summary
+
+### POST /db/risk (document level)
+```
+{
+  "doc_id": "doc_1",
+  "clause_id": null,
+  "risk_score": 0.8,
+  "severity": 0.7,
+  "impact": 0.9,
+  "urgency": 0.6,
+  "priority": "high"
+}
+```
+
+### POST /db/risk (clause level)
+```
+{
+  "doc_id": "doc_1",
+  "clause_id": "doc_1:c1",
+  "risk_score": 0.6,
+  "severity": 0.5,
+  "impact": 0.7,
+  "urgency": 0.4,
+  "priority": "medium"
+}
+```
+
+### GET - doc risk - /db/risk/doc_id
+OUTPUT:
+```
+{
+    "risk_id": "a8665b46-dbbd-47e0-9cbc-3000de2a6b3a",
+    "doc_id": "doc_1",
+    "clause_id": null,
+    "risk_score": "0.800",
+    "severity": "0.700",
+    "impact": "0.900",
+    "urgency": "0.600",
+    "priority": "high",
+    "scored_at": "2026-04-28T12:52:17.662Z"
+}
+```
+### GET - clause risk - /db/risk/doc_id/clauses
+OUTPUTS all clauses:
+```
+[
+    {
+        "risk_id": "7854c279-dc1f-4ed5-a2b3-08f8e1b4e6a6",
+        "doc_id": "doc_1",
+        "clause_id": "doc_1:c1",
+        "risk_score": "0.600",
+        "severity": "0.500",
+        "impact": "0.700",
+        "urgency": "0.400",
+        "priority": "medium",
+        "scored_at": "2026-04-28T12:50:58.673Z"
+    }
+]
+```

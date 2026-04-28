@@ -51,3 +51,27 @@ export const bulkInsertClauses = async (doc_id, clauses) => {
         client.release();
     }
 };
+
+export const getClausesByDoc = async (doc_id, type) => {
+    let queryText = `
+        SELECT * FROM clauses WHERE doc_id = $1
+    `;
+    const params = [doc_id];
+
+    if (type) {
+        params.push(type);
+        queryText += ` AND type = $2`;
+    }
+
+    const result = await pool.query(queryText, params);
+    return result.rows;
+};
+
+export const getClauseById = async (clause_id) => {
+    const result = await pool.query(
+        `SELECT * FROM clauses WHERE clause_id = $1`,
+        [clause_id]
+    );
+
+    return result.rows[0] || null;
+};

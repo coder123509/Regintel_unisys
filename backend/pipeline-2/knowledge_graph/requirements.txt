@@ -1,0 +1,28 @@
+# --- Neo4j Database Connections ---
+# Official driver is more stable than py2neo for production
+neo4j==5.19.0
+
+# --- AI, LLM, and RAG Layer ---
+# Use the modern unified Google SDK
+google-genai==1.73.1
+# Vector DB and Embeddings
+sentence-transformers==2.7.0
+chromadb==0.4.24
+
+# --- Backend API ---
+fastapi==0.110.1
+uvicorn==0.29.0
+python-multipart==0.0.9
+
+# --- Data Processing ---
+pandas==2.2.2
+numpy==1.26.4
+
+# --- Security and Utilities ---
+python-dotenv==1.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# --- Performance (Optional but recommended) ---
+# For faster processing of local embeddings
+torch --index-url https://download.pytorch.org/whl/cpu

@@ -1,0 +1,19 @@
+ fastapi 
+ uvicorn 
+ sqlalchemy 
+ psycopg2-binary 
+ python-dotenv
+ requests 
+ beautifulsoup4 
+ pdfplumber
+ apscheduler 
+ openai
+google-genai
+ dotenv
+ beautifulsoup4
+ sqlalchemy
+ psycopg2
+ google.generativeai
+transformers
+torch 
+sentencepiece

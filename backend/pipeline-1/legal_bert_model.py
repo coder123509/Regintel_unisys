@@ -1,8 +1,8 @@
 """
 legal_bert_model.py
--------------------
-Loads Legal-BERT once at import time and exposes get_embeddings().
-Returns a plain Python list (serialisable) instead of a raw tensor.
+───────────────────
+Legal-BERT for clause embeddings.
+Lazy-loaded on first use — does not block pipeline startup.
 """
 
 from transformers import AutoTokenizer, AutoModel
@@ -10,18 +10,27 @@ import torch
 
 _MODEL_NAME = "nlpaueb/legal-bert-base-uncased"
 
-print("Loading Legal-BERT model…")
-_tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME)
-_model = AutoModel.from_pretrained(_MODEL_NAME)
-_model.eval()
-print("Legal-BERT loaded.")
+_tokenizer = None
+_model     = None
+
+
+def _load():
+    global _tokenizer, _model
+    if _model is None:
+        print("Loading Legal-BERT model…")
+        _tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME)
+        _model     = AutoModel.from_pretrained(_MODEL_NAME)
+        _model.eval()
+        print("Legal-BERT loaded.")
 
 
 def get_embeddings(text: str) -> list[float]:
     """
-    Returns the mean-pooled CLS embedding as a plain Python list of floats.
-    Safe to log, store, or pass to a vector DB.
+    Returns mean-pooled embedding as a plain Python list of floats.
+    Model is loaded on first call, then reused for all subsequent calls.
     """
+    _load()
+
     inputs = _tokenizer(
         text,
         return_tensors="pt",
@@ -32,6 +41,5 @@ def get_embeddings(text: str) -> list[float]:
     with torch.no_grad():
         outputs = _model(**inputs)
 
-    # Mean pool over token dimension → shape (1, hidden_size)
     embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
     return embedding.tolist()

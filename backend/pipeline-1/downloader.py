@@ -28,16 +28,16 @@ def download_pdf(url):
             allow_redirects=True
         )
 
-        # ❌ If HTML instead of PDF
+        # If HTML instead of PDF
         if "text/html" in response.headers.get("Content-Type", ""):
-            print("⚠️ Blocked or HTML response:", url)
+            print("Blocked or HTML response:", url)
             return None
 
         # save file
         with open(path, "wb") as f:
             f.write(response.content)
 
-        # ✅ validate by opening
+        # validate by opening
         try:
             with pdfplumber.open(path) as pdf:
                 _ = pdf.pages

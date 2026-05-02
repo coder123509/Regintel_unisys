@@ -4,20 +4,18 @@ controller.py
 Pipeline Orchestration Controller
 Backend: /backend/controller/controller.py
 
-Responsibilities (Phase 1 — P1 → P2 only):
+Responsibilities:
   - Polls pipeline_status table every POLL_INTERVAL seconds
-  - Maintains an in-memory queue of docs ready for P2
-    (p1_status=completed, p2_status=pending)
-  - Sends docs to P2 ONE AT A TIME (sequential per spec)
-  - While P2 is busy with doc-N, continues polling so newly
-    completed P1 docs get queued immediately
-  - Updates p2_status via DB microservice:
-      pending → processing → completed | failed
+  - P1 → P2: queues docs where p1=completed, p2=pending
+  - P2 → P3: queues docs where p2=completed, p3=pending
+  - Processes each pipeline queue ONE doc at a time (sequential)
+  - Updates pipeline status at each stage
 
 Environment variables (.env):
-  DB_SERVICE_URL   = http://localhost:5000   (Node DB microservice)
-  PIPELINE_2_URL   = http://localhost:8002   (FastAPI P2 service)
-  POLL_INTERVAL    = 15                      (seconds between polls)
+  DB_SERVICE_URL   = http://localhost:5000
+  PIPELINE_2_URL   = http://localhost:8002
+  PIPELINE_3_URL   = http://localhost:8003
+  POLL_INTERVAL    = 15
 """
 
 import os
@@ -31,38 +29,38 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_URL      = os.getenv("DB_SERVICE_URL", "http://localhost:5000")
-P2_URL      = os.getenv("PIPELINE_2_URL", "http://localhost:8002")
-POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", 15))  # seconds
+DB_URL        = os.getenv("DB_SERVICE_URL", "http://localhost:5000")
+P2_URL        = os.getenv("PIPELINE_2_URL", "http://localhost:8002")
+P3_URL        = os.getenv("PIPELINE_3_URL", "http://localhost:8003")
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", 15))
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  [CONTROLLER]  %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("controller")
 
 # ── Shared State ──────────────────────────────────────────────────────────────
-# Queue of doc_ids waiting to be sent to P2
 p2_queue: deque[str] = deque()
-
-# Lock so poller thread and worker thread don't race on the queue
+p3_queue: deque[str] = deque()
 queue_lock = threading.Lock()
 
-# Tracks which doc_ids are already in queue or being processed
-# so we never double-enqueue the same doc
-known_docs: set[str] = set()
+# Tracks docs already seen so we never double-enqueue
+known_p2_docs: set[str] = set()
+known_p3_docs: set[str] = set()
 
 
-# ── DB Microservice Helpers ───────────────────────────────────────────────────
+# ── DB Microservice ───────────────────────────────────────────────────────────
 
 def db_get_pipeline_status() -> list[dict]:
-    """GET /db/pipeline-status — returns all rows."""
+    """GET /db/pipeline-status"""
     try:
         resp = requests.get(f"{DB_URL}/db/pipeline-status", timeout=10)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        return data if isinstance(data, list) else []
     except Exception as e:
         log.warning(f"Could not fetch pipeline-status: {e}")
         return []
@@ -83,20 +81,19 @@ def db_update_status(doc_id: str, pipeline: str, status: str) -> bool:
         return False
 
 
-# ── Pipeline 2 Trigger ────────────────────────────────────────────────────────
+# ── Pipeline Triggers ─────────────────────────────────────────────────────────
 
 def trigger_p2(doc_id: str) -> bool:
     """
-    Calls GET /rag/map/{doc_id} on Pipeline 2.
-    This is a BLOCKING call — P2 processes the full document
-    synchronously and returns when done.
-    Returns True on success, False on failure.
+    GET /rag/map/{doc_id} — blocking until P2 finishes.
+    P2 itself updates p2_status in DB when done.
+    Controller updates it here only on failure (P2 may not have reached its own update).
     """
     try:
         log.info(f"→ Triggering P2 for {doc_id}")
         resp = requests.get(
             f"{P2_URL}/rag/map/{doc_id}",
-            timeout=300,  # 5 min max per document
+            timeout=600,  # 10 min — P2 has rate limit sleeps
         )
         if resp.status_code == 200:
             log.info(f"✔ P2 completed for {doc_id}")
@@ -112,79 +109,122 @@ def trigger_p2(doc_id: str) -> bool:
         return False
 
 
-# ── Worker Thread — processes queue one doc at a time ─────────────────────────
+def trigger_p3(doc_id: str) -> bool:
+    """
+    POST /risk/analyze/{doc_id} — blocking until P3 finishes.
+    P3 itself updates p3_status in DB when done.
+    """
+    try:
+        log.info(f"→ Triggering P3 for {doc_id}")
+        resp = requests.post(
+            f"{P3_URL}/risk/analyze/{doc_id}",
+            timeout=300,  # 5 min
+        )
+        if resp.status_code == 200:
+            log.info(f"✔ P3 completed for {doc_id}")
+            return True
+        else:
+            log.error(f"✘ P3 returned {resp.status_code} for {doc_id}: {resp.text[:200]}")
+            return False
+    except requests.exceptions.Timeout:
+        log.error(f"✘ P3 timed out for {doc_id}")
+        return False
+    except Exception as e:
+        log.error(f"✘ P3 request failed for {doc_id}: {e}")
+        return False
+
+
+# ── Worker Threads ────────────────────────────────────────────────────────────
 
 def p2_worker():
-    """
-    Runs in its own thread.
-    Picks one doc_id from the queue, processes it fully through P2,
-    then picks the next. Blocks between docs until queue has work.
-    """
+    """Processes P2 queue one doc at a time."""
     log.info("P2 Worker thread started.")
-
     while True:
         doc_id = None
-
         with queue_lock:
             if p2_queue:
                 doc_id = p2_queue.popleft()
 
         if doc_id is None:
-            # Nothing to do — sleep briefly and check again
             time.sleep(3)
             continue
 
-        log.info(f"━━━ Starting P2 for {doc_id} ━━━")
-
-        # Mark as processing in DB
+        log.info(f"━━━ P2 starting: {doc_id} ━━━")
         db_update_status(doc_id, "p2", "processing")
 
-        # Trigger P2 — blocking call
         success = trigger_p2(doc_id)
 
-        # Update final status
-        if success:
-            db_update_status(doc_id, "p2", "completed")
-            log.info(f"✔ {doc_id} → p2_status=completed")
-            # P3 trigger goes here later (Phase 2)
-        else:
+        if not success:
+            # P2 failed before it could update its own status
             db_update_status(doc_id, "p2", "failed")
             log.warning(f"✘ {doc_id} → p2_status=failed")
 
 
-# ── Poller Thread — discovers new ready docs ──────────────────────────────────
+def p3_worker():
+    """Processes P3 queue one doc at a time."""
+    log.info("P3 Worker thread started.")
+    while True:
+        doc_id = None
+        with queue_lock:
+            if p3_queue:
+                doc_id = p3_queue.popleft()
+
+        if doc_id is None:
+            time.sleep(3)
+            continue
+
+        log.info(f"━━━ P3 starting: {doc_id} ━━━")
+        db_update_status(doc_id, "p3", "processing")
+
+        success = trigger_p3(doc_id)
+
+        if not success:
+            db_update_status(doc_id, "p3", "failed")
+            log.warning(f"✘ {doc_id} → p3_status=failed")
+
+
+# ── Poller Thread ─────────────────────────────────────────────────────────────
 
 def poller():
     """
-    Runs in its own thread.
-    Every POLL_INTERVAL seconds, checks pipeline_status for docs where
-    p1=completed and p2=pending, and adds new ones to the queue.
+    Polls pipeline_status every POLL_INTERVAL seconds.
+    Finds docs ready for P2 (p1=completed, p2=pending)
+    and docs ready for P3 (p2=completed, p3=pending).
     """
     log.info(f"Poller thread started. Checking every {POLL_INTERVAL}s.")
 
     while True:
         rows = db_get_pipeline_status()
 
-        ready = [
-            r["doc_id"]
-            for r in rows
-            if r.get("p1_status") == "completed"
-            and r.get("p2_status") == "pending"
-        ]
+        new_p2 = []
+        new_p3 = []
 
-        newly_queued = []
         with queue_lock:
-            for doc_id in ready:
-                if doc_id not in known_docs:
-                    p2_queue.append(doc_id)
-                    known_docs.add(doc_id)
-                    newly_queued.append(doc_id)
+            for r in rows:
+                doc_id = r.get("doc_id")
+                if not doc_id:
+                    continue
 
-        if newly_queued:
-            log.info(f"Queued {len(newly_queued)} new doc(s) for P2: {newly_queued}")
-            log.info(f"Queue depth: {len(p2_queue)}")
-        else:
-            log.debug(f"Poll complete — nothing new. Queue depth: {len(p2_queue)}")
+                # Ready for P2
+                if (r.get("p1_status") == "completed"
+                        and r.get("p2_status") == "pending"
+                        and doc_id not in known_p2_docs):
+                    p2_queue.append(doc_id)
+                    known_p2_docs.add(doc_id)
+                    new_p2.append(doc_id)
+
+                # Ready for P3
+                if (r.get("p2_status") == "completed"
+                        and r.get("p3_status") == "pending"
+                        and doc_id not in known_p3_docs):
+                    p3_queue.append(doc_id)
+                    known_p3_docs.add(doc_id)
+                    new_p3.append(doc_id)
+
+        if new_p2:
+            log.info(f"Queued for P2 ({len(new_p2)}): {new_p2}")
+        if new_p3:
+            log.info(f"Queued for P3 ({len(new_p3)}): {new_p3}")
 
         time.sleep(POLL_INTERVAL)
 
@@ -196,29 +236,26 @@ def main():
     log.info("  RegIntel Pipeline Controller")
     log.info(f"  DB Service : {DB_URL}")
     log.info(f"  Pipeline 2 : {P2_URL}")
+    log.info(f"  Pipeline 3 : {P3_URL}")
     log.info(f"  Poll every : {POLL_INTERVAL}s")
     log.info("═" * 55)
 
-    # Verify DB service is reachable before starting
+    # Verify DB is reachable
     try:
         requests.get(f"{DB_URL}/db/pipeline-status", timeout=5).raise_for_status()
         log.info("✔ DB microservice reachable")
     except Exception as e:
-        log.error(f"✘ Cannot reach DB microservice at {DB_URL}: {e}")
+        log.error(f"✘ Cannot reach DB microservice: {e}")
         log.error("  Start the DB service first, then run the controller.")
         return
 
-    # Start worker thread (processes queue)
-    worker_thread = threading.Thread(target=p2_worker, daemon=True)
-    worker_thread.start()
-
-    # Start poller thread (fills queue)
-    poller_thread = threading.Thread(target=poller, daemon=True)
-    poller_thread.start()
+    # Start threads
+    threading.Thread(target=p2_worker, daemon=True).start()
+    threading.Thread(target=p3_worker, daemon=True).start()
+    threading.Thread(target=poller,    daemon=True).start()
 
     log.info("Controller running. Press Ctrl+C to stop.\n")
 
-    # Keep main thread alive
     try:
         while True:
             time.sleep(1)

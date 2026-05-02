@@ -95,3 +95,30 @@ def insert_clauses(doc_id: str, clauses: list[dict]) -> int:
     if not data.get("success"):
         raise RuntimeError(f"DB rejected clauses insert: {data}")
     return data.get("inserted", len(clauses))
+
+# ─────────────────────────────────────────────
+# PIPELINE STATUS
+# ─────────────────────────────────────────────
+
+def create_pipeline_status(doc_id: str) -> None:
+    """
+    POST /db/pipeline-status
+    """
+    resp = _session.post(
+        _url("/db/pipeline-status"),
+        json={"doc_id": doc_id},
+        timeout=10,
+    )
+    resp.raise_for_status()
+
+
+def update_pipeline_status(doc_id: str, pipeline: str, status: str) -> None:
+    """
+    PATCH /db/pipeline-status/{doc_id}
+    """
+    resp = _session.patch(
+        _url(f"/db/pipeline-status/{doc_id}"),
+        json={"pipeline": pipeline, "status": status},
+        timeout=10,
+    )
+    resp.raise_for_status()

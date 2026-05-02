@@ -91,7 +91,7 @@ def run() -> None:
 
         except Exception as e:
             print(f"  Storage failed for {url}: {e}")
-        print(f"  ⏳ Waiting 10s before next document (rate limit)...")
+        print(f"   Waiting 10s before next document (rate limit)...")
         time.sleep(10)  # 10s gap = max 6 docs/min, well under Groq's 30 req/min limit
 
     print(f"\n{'='*60}")

@@ -1,42 +1,43 @@
-import pandas as pd
+"""
+knowledge_graph/extract.py
+──────────────────────────
+Extracts internal policy data from Neo4j to prepare for
+vector embedding in ChromaDB.
+"""
+
+import os
 from neo4j import GraphDatabase
+from dotenv import load_dotenv
 
-# Ensure these match your final project environment
-URI = "neo4j+s://e556d5f0.databases.neo4j.io"
-AUTH = ("neo4j", "6DHwk-nhxG42F6MPM8IKzTGbDlAEKyBs7s8lyQyVWB0")
+load_dotenv()
 
-def extract_policy_context(driver):
+_URI  = os.getenv("NEO4J_URI")
+_AUTH = (os.getenv("NEO4J_USER"), os.getenv("NEO4J_PASSWORD"))
+
+
+def extract_policy_context(driver) -> list[dict]:
     """
-    Pulls data from Neo4j to prepare for Vector Embedding.
-    Updated to match the final 'Policy' schema and rich context requirements.
+    Pulls Policy + Department data from Neo4j.
+    Builds a rich 'full_context' string used for embedding.
     """
     query = """
     MATCH (p:Policy)-[:OWNED_BY]->(d:Department)
-    RETURN 
-        p.id AS policy_id, 
-        p.name AS policy_name,
-        d.name AS department_name,
-        // We include the description/gap_description field because it contains 
-        // the technical keywords the RAG needs for matching.
-        "Policy: " + p.name + 
-        " | Context: " + p.description + 
-        " | Framework: " + p.framework + 
-        " | Dept: " + d.name AS full_context
+    RETURN
+        p.id          AS policy_id,
+        p.name        AS policy_name,
+        d.name        AS department_name,
+        "Policy: "    + p.name        +
+        " | Context: "+ p.description +
+        " | Framework: " + p.framework +
+        " | Dept: "   + d.name        AS full_context
     """
-    
     with driver.session() as session:
         result = session.run(query)
-        data = [record.data() for record in result]
-        return data
+        return [record.data() for record in result]
 
 if __name__ == "__main__":
-    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+    with GraphDatabase.driver(_URI, auth=_AUTH) as driver:
         policies = extract_policy_context(driver)
-        print(f"--- Pipeline 3: Extraction Phase ---")
-        print(f"Extracted {len(policies)} records from Knowledge Graph.")
-        
+        print(f"Extracted {len(policies)} policies from Knowledge Graph.")
         if policies:
-            # Check for the key mapping ID and technical context
-            sample = policies[0]
-            print(f"Verification - Policy ID: {sample['policy_id']}")
-            print(f"Verification - Context Quality: {sample['full_context'][:150]}...")
+            print(f"Sample: {policies[0]['full_context'][:150]}...")

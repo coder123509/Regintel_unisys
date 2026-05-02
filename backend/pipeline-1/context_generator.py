@@ -25,7 +25,7 @@ def _heuristic_context(text: str) -> dict:
 
 def generate_context(text: str) -> dict:
     trimmed = text[:6000]
-    prompt = CONTEXT_PROMPT.format(text=trimmed)
+    prompt = CONTEXT_PROMPT.replace("{text}", trimmed)
 
     try:
         response = _client.chat.completions.create(

@@ -1,0 +1,11 @@
+department_id,department_name,head_title,employee_count,regulatory_exposure,primary_regulator
+DEPT-001,Cybersecurity & IT Risk,Chief Information Security Officer,52,RBI Cyber Framework 2016 / CERT-In Directions 2022 / RBI DPS 2021 / ISO 27001,RBI / CERT-In
+DEPT-002,Regulatory Compliance,Chief Compliance Officer,34,RBI KYC Master Directions 2025 / FIU-IND Guidelines / AML-CFT,RBI / FIU-IND
+DEPT-003,Data Governance & Privacy,Chief Data Officer,22,DPDP Act 2023 / RBI Data Storage Directive 2018 / CERT-In 2022,MeitY / RBI
+DEPT-004,Retail Banking Operations,VP Retail Banking,340,RBI Ombudsman Scheme 2021 / RBI Currency Management,RBI
+DEPT-005,Digital Lending & Credit,Head of Digital Assets,60,RBI Digital Lending Guidelines 2022 / RBI Fair Practices Code,RBI
+DEPT-006,Vendor & Third-Party Management,Director of Procurement,20,RBI IT Outsourcing Master Directions 2023 / DPDP Act 2023,RBI
+DEPT-007,Treasury & Payments,Head of Treasury Operations,44,RBI Payment and Settlement Systems Act / FEMA / SWIFT CSP,RBI / MoF
+DEPT-008,Internal Audit & Risk,Chief Risk Officer,28,RBI Internal Audit Framework 2023 / Basel III,RBI
+DEPT-009,Human Resources,Chief Human Resources Officer,18,RBI Cyber Framework (training mandate) / DPDP Act (employee data),RBI / MeitY
+DEPT-010,Engineering & Technology,Chief Technology Officer,210,RBI DPS 2021 / RBI Cyber Framework / CERT-In Directions / DPDP Act,RBI / CERT-In

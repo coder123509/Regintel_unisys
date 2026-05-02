@@ -1,19 +1,9 @@
- fastapi 
- uvicorn 
- sqlalchemy 
- psycopg2-binary 
- python-dotenv
- requests 
- beautifulsoup4 
- pdfplumber
- apscheduler 
- openai
-google-genai
- dotenv
- beautifulsoup4
- sqlalchemy
- psycopg2
- google.generativeai
-transformers
-torch 
+google-generativeai==0.8.6
+transformers==4.38.2
+torch==2.2.2
+numpy<2
+pdfplumber>=0.10.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+python-dotenv>=1.0.0
 sentencepiece

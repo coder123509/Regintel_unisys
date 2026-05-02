@@ -2,7 +2,6 @@ import time
 from datetime import datetime
 from run_pipeline import run
 
-# ⏱️ interval in seconds (e.g., 10 minutes = 600)
 INTERVAL = 600  
 
 

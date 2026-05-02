@@ -32,7 +32,7 @@ router.get('/documents/:doc_id/clauses', async (req, res, next) => {
 });
 
 // GET /db/clauses/:clause_id
-router.get('/:clause_id', async (req, res, next) => {
+router.get('/clauses/:clause_id', async (req, res, next) => {
     try {
         const data = await clausesService.getClauseById(req.params.clause_id);
         res.json(data);

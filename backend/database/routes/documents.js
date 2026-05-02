@@ -24,10 +24,10 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// GET /db/documents/:doc_id (full)
-router.get('/:doc_id', async (req, res, next) => {
+// GET /db/documents/hash/:hash
+router.get('/hash/:hash', async (req, res, next) => {
     try {
-        const data = await documentsService.getDocumentById(req.params.doc_id);
+        const data = await documentsService.checkHash(req.params.hash);
         res.json(data);
     } catch (err) {
         next(err);
@@ -68,10 +68,12 @@ router.get('/:doc_id/context', async (req, res, next) => {
     }
 });
 
-// GET /db/documents/hash/:hash
-router.get('/hash/:hash', async (req, res, next) => {
+
+
+// GET /db/documents/:doc_id (full)
+router.get('/:doc_id', async (req, res, next) => {
     try {
-        const data = await documentsService.checkHash(req.params.hash);
+        const data = await documentsService.getDocumentById(req.params.doc_id);
         res.json(data);
     } catch (err) {
         next(err);

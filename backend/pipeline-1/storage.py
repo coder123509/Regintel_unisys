@@ -14,18 +14,13 @@ import uuid
 from datetime import datetime, timezone
 
 from db_client import insert_document, insert_context, insert_clauses, update_document_status
-
+from db_client import create_pipeline_status, update_pipeline_status
 
 def _make_doc_id() -> str:
     return "doc_" + str(uuid.uuid4())[:8]
 
 
 def _make_source_id(url: str, hash_val: str) -> str:
-    """
-    source_id must be UNIQUE per document.
-    Derived from URL filename + first 8 chars of hash.
-    e.g. "rbi_NT60A82D07_ab12cd34"
-    """
     filename = url.split("/")[-1].split(".")[0][:20]
     return f"rbi_{filename}_{hash_val[:8]}"
 
@@ -55,6 +50,10 @@ def store_document(data: dict) -> str:
         "published_at": now,
     })
     print(f"  ✔ Document row inserted — doc_id: {doc_id}, source_id: {source_id}")
+    
+    create_pipeline_status(doc_id)
+    update_pipeline_status(doc_id, "p1", "processing")
+    print("  ✔ Pipeline status created (p1 = processing)")
 
     # ── 2. POST /db/documents/{doc_id}/context ──────────────────────────────
     ctx = data["context"]
@@ -86,6 +85,17 @@ def store_document(data: dict) -> str:
 
     # ── 4. PATCH /db/documents/{doc_id}/status → processed ─────────────────
     update_document_status(doc_id, "processed")
+    update_pipeline_status(doc_id, "p1", "completed")
+
+    print("  ✔ Status set to 'processed' and p1 marked completed")
     print(f"  ✔ Status set to 'processed'")
 
     return doc_id
+
+    # except Exception as e:
+    # print(f"  Storage failed for {url}: {e}")
+
+    # try:
+    #     update_pipeline_status(doc_id, "p1", "failed")
+    # except:
+    #     pass

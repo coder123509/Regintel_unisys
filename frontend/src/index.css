@@ -1,0 +1,153 @@
+:root {
+  /* ── Colors ── */
+  --c-bg: #f5f4f0;
+  --c-surface: #ffffff;
+  --c-surface-2: #f0ede8;
+  --c-border: #e0dbd3;
+  --c-border-light: #ede9e3;
+
+  --c-accent: #1a3a5c;
+  --c-accent-mid: #2c5282;
+  --c-accent-light: #ebf0f7;
+
+  --c-gold: #b5873c;
+  --c-gold-light: #f5edd9;
+
+  --c-text-primary: #1a1a1a;
+  --c-text-secondary: #4a4a4a;
+  --c-text-muted: #7a7a7a;
+  --c-text-inverse: #ffffff;
+
+  --c-success: #2d6a4f;
+  --c-success-light: #d8f3e6;
+
+  /* ── Radius ── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+
+  /* ── Fonts ── */
+  --font-heading: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font: var(--font-body); /* FIXED */
+
+  /* ── Animation ── */
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Base ── */
+body {
+  font-family: var(--font);
+  background: var(--c-bg);
+  color: var(--c-text-primary);
+  line-height: 1.6;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Apply heading font globally */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* ── Elements ── */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--c-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c5bfb5;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Animation Utilities ── */
+.anim-fade-up   { animation: fadeUp   0.65s cubic-bezier(0.4,0,0.2,1) both; }
+.anim-fade-in   { animation: fadeIn   0.5s  cubic-bezier(0.4,0,0.2,1) both; }
+.anim-slide-r   { animation: slideRight 0.65s cubic-bezier(0.4,0,0.2,1) both; }
+.anim-slide-l   { animation: slideLeft  0.65s cubic-bezier(0.4,0,0.2,1) both; }
+.anim-scale-in  { animation: scaleIn  0.55s cubic-bezier(0.4,0,0.2,1) both; }
+
+/* ── Delays ── */
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+.delay-5 { animation-delay: 0.5s; }
+.delay-6 { animation-delay: 0.6s; }
+
+/* Section eyebrow labels — larger */
+.eyebrow,
+[class*="eyebrow"] {
+  font-size: 0.95rem !important;
+}
+
+/* Section headings — larger across all sections */
+[class*="heading"] {
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+}

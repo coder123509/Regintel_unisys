@@ -1,0 +1,131 @@
+.footer {
+  background: var(--c-accent);
+  color: #fff;
+  padding: 5rem 2.5rem 2rem;
+}
+
+.top {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 5rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.logoMark {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: block;
+}
+
+.logoTagline {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  margin-top: 0.1rem;
+}
+
+.brandDesc {
+  font-size: 0.85rem;
+  font-weight: 300;
+  opacity: 0.7;
+  line-height: 1.75;
+  max-width: 420px;
+  margin-bottom: 1.5rem;
+}
+
+.tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 100px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.75);
+}
+
+.linkCols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.linkColTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.link {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 300;
+  opacity: 0.75;
+  margin-bottom: 0.55rem;
+  transition: opacity var(--transition);
+}
+
+.link:hover { opacity: 1; }
+
+.bottom {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-top: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.copy {
+  font-size: 0.78rem;
+  opacity: 0.5;
+}
+
+.disclaimer {
+  font-size: 0.72rem;
+  opacity: 0.35;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 900px) {
+  .top { grid-template-columns: 1fr; gap: 3rem; }
+  .linkCols { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 500px) {
+  .linkCols { grid-template-columns: 1fr; }
+}

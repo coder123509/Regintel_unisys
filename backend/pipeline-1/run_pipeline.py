@@ -16,6 +16,7 @@ from fetcher import get_valid_links
 from downloader import download_pdf
 from utils.pdf_parser import extract_text
 from cleaner import clean_text
+from utils.hashing import generate_hash
 from clause_llm import extract_clauses
 from context_generator import generate_context
 from deduplicator import is_duplicate_hash

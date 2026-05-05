@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+
+  # ── Database Service (uses Neon) ────────────────────────────────
+
+  database-service:
+    build: ./database
+    container_name: regintel-db-service
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+  # ── Pipeline 1 ──────────────────────────────────────────────────
+
+  pipeline-1:
+    build: ./pipeline-1
+    container_name: regintel-p1
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      DB_SERVICE_URL: http://database-service:5000
+    volumes:
+      - p1_pdfs:/app/data/pdfs
+      - p1_legal_bert:/app/legal_bert_local
+    depends_on:
+      - database-service
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+  # ── Pipeline 2 ──────────────────────────────────────────────────
+
+  pipeline-2:
+    build: ./pipeline-2
+    container_name: regintel-p2
+    ports:
+      - "8002:8002"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      DB_SERVICE_URL: http://database-service:5000
+    volumes:
+      - p2_chromadb:/app/compliance_db
+      - p2_local_model:/app/local_model
+    depends_on:
+      - database-service
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+  # ── Pipeline 3 ──────────────────────────────────────────────────
+
+  pipeline-3:
+    build: ./pipeline-3
+    container_name: regintel-p3
+    ports:
+      - "8003:8003"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DB_SERVICE_URL: http://database-service:5000
+    depends_on:
+      - database-service
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+  # ── Controller ──────────────────────────────────────────────────
+
+  controller:
+    build: ./controller
+    container_name: regintel-controller
+    environment:
+      DB_SERVICE_URL: http://database-service:5000
+      PIPELINE_2_URL: http://pipeline-2:8002
+      PIPELINE_3_URL: http://pipeline-3:8003
+      POLL_INTERVAL: 15
+    depends_on:
+      - database-service
+      - pipeline-2
+      - pipeline-3
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+volumes:
+  p1_pdfs:
+  p1_legal_bert:
+  p2_chromadb:
+  p2_local_model:
+
+networks:
+  regintel-network:
+    driver: bridge

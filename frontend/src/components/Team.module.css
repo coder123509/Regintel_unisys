@@ -226,3 +226,17 @@
   .grid { grid-template-columns: 1fr; }
   .mentorCard { flex-direction: column; align-items: flex-start; }
 }
+
+.mentorsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* On mobile, stack them */
+@media (max-width: 640px) {
+  .mentorsRow {
+    grid-template-columns: 1fr;
+  }
+}

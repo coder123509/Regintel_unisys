@@ -1,9 +1,9 @@
 import styles from './Hero.module.css'
 
 const floatingItems = [
-  { label: 'Clause Extracted', sub: 'obligation · 0.93 confidence', color: '#dff0e8', dot: '#2d6a4f' },
+  { label: 'Clause Extracted', sub: 'Obligation · confidence', color: '#dff0e8', dot: '#2d6a4f' },
   { label: 'Gap Detected', sub: 'Data Protection Policy', color: '#fff3d9', dot: '#b5873c' },
-  { label: 'Risk Score', sub: '0.82 · Priority: High', color: '#ebf0f7', dot: '#1a3a5c' },
+  { label: 'Risk Score', sub: 'Priority: Low,Medium,High', color: '#ebf0f7', dot: '#1a3a5c' },
   { label: 'Action Generated', sub: 'Draft policy update sent', color: '#f0ede8', dot: '#4a4a4a' },
 ]
 

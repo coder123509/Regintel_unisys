@@ -5,20 +5,31 @@ services:
   # ── Database Service (uses Neon) ────────────────────────────────
 
   database-service:
-    build: ./database
+    build: ./backend/database
     container_name: regintel-db-service
     ports:
       - "5000:5000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
     networks:
       - regintel-network
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/db/documents"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
 
   # ── Pipeline 1 ──────────────────────────────────────────────────
 
   pipeline-1:
-    build: ./pipeline-1
+    build: ./backend/pipeline-1
     container_name: regintel-p1
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY}
@@ -35,7 +46,7 @@ services:
   # ── Pipeline 2 ──────────────────────────────────────────────────
 
   pipeline-2:
-    build: ./pipeline-2
+    build: ./backend/pipeline-2
     container_name: regintel-p2
     ports:
       - "8002:8002"
@@ -57,7 +68,7 @@ services:
   # ── Pipeline 3 ──────────────────────────────────────────────────
 
   pipeline-3:
-    build: ./pipeline-3
+    build: ./backend/pipeline-3
     container_name: regintel-p3
     ports:
       - "8003:8003"
@@ -73,7 +84,7 @@ services:
   # ── Controller ──────────────────────────────────────────────────
 
   controller:
-    build: ./controller
+    build: ./backend/controller
     container_name: regintel-controller
     environment:
       DB_SERVICE_URL: http://database-service:5000
@@ -81,7 +92,24 @@ services:
       PIPELINE_3_URL: http://pipeline-3:8003
       POLL_INTERVAL: 15
     depends_on:
-      - database-service
+      database-service:
+        condition: service_healthy
+      pipeline-2:
+        condition: service_started
+      pipeline-3:
+        condition: service_started
+    networks:
+      - regintel-network
+    restart: unless-stopped
+
+  # ── Frontend ─────────────────────────────────────────────────────
+
+  frontend:
+    build: ./frontend
+    container_name: regintel-frontend
+    ports:
+      - "3000:80"
+    depends_on:
       - pipeline-2
       - pipeline-3
     networks:

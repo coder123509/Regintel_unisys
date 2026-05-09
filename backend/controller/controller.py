@@ -5,6 +5,7 @@ Pipeline Orchestration Controller
 Backend: /backend/controller/controller.py
 
 Responsibilities:
+  - Waits for DB, P2, P3 to be ready before starting
   - Polls pipeline_status table every POLL_INTERVAL seconds
   - P1 → P2: queues docs where p1=completed, p2=pending
   - P2 → P3: queues docs where p2=completed, p3=pending
@@ -47,9 +48,24 @@ p2_queue: deque[str] = deque()
 p3_queue: deque[str] = deque()
 queue_lock = threading.Lock()
 
-# Tracks docs already seen so we never double-enqueue
 known_p2_docs: set[str] = set()
 known_p3_docs: set[str] = set()
+
+
+# ── Readiness Checks ──────────────────────────────────────────────────────────
+
+def wait_for_service(name: str, url: str, interval: int = 5) -> None:
+    """Blocks until the service responds with 2xx."""
+    log.info(f"Waiting for {name} to be ready...")
+    while True:
+        try:
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            log.info(f"✔ {name} reachable")
+            return
+        except Exception as e:
+            log.warning(f"{name} not ready yet — retrying in {interval}s...")
+            time.sleep(interval)
 
 
 # ── DB Microservice ───────────────────────────────────────────────────────────
@@ -84,11 +100,6 @@ def db_update_status(doc_id: str, pipeline: str, status: str) -> bool:
 # ── Pipeline Triggers ─────────────────────────────────────────────────────────
 
 def trigger_p2(doc_id: str) -> bool:
-    """
-    GET /rag/map/{doc_id} — blocking until P2 finishes.
-    P2 itself updates p2_status in DB when done.
-    Controller updates it here only on failure (P2 may not have reached its own update).
-    """
     try:
         log.info(f"→ Triggering P2 for {doc_id}")
         resp = requests.get(
@@ -110,10 +121,6 @@ def trigger_p2(doc_id: str) -> bool:
 
 
 def trigger_p3(doc_id: str) -> bool:
-    """
-    POST /risk/analyze/{doc_id} — blocking until P3 finishes.
-    P3 itself updates p3_status in DB when done.
-    """
     try:
         log.info(f"→ Triggering P3 for {doc_id}")
         resp = requests.post(
@@ -137,7 +144,6 @@ def trigger_p3(doc_id: str) -> bool:
 # ── Worker Threads ────────────────────────────────────────────────────────────
 
 def p2_worker():
-    """Processes P2 queue one doc at a time."""
     log.info("P2 Worker thread started.")
     while True:
         doc_id = None
@@ -155,13 +161,11 @@ def p2_worker():
         success = trigger_p2(doc_id)
 
         if not success:
-            # P2 failed before it could update its own status
             db_update_status(doc_id, "p2", "failed")
             log.warning(f"✘ {doc_id} → p2_status=failed")
 
 
 def p3_worker():
-    """Processes P3 queue one doc at a time."""
     log.info("P3 Worker thread started.")
     while True:
         doc_id = None
@@ -186,11 +190,6 @@ def p3_worker():
 # ── Poller Thread ─────────────────────────────────────────────────────────────
 
 def poller():
-    """
-    Polls pipeline_status every POLL_INTERVAL seconds.
-    Finds docs ready for P2 (p1=completed, p2=pending)
-    and docs ready for P3 (p2=completed, p3=pending).
-    """
     log.info(f"Poller thread started. Checking every {POLL_INTERVAL}s.")
 
     while True:
@@ -240,14 +239,10 @@ def main():
     log.info(f"  Poll every : {POLL_INTERVAL}s")
     log.info("═" * 55)
 
-    # Verify DB is reachable
-    try:
-        requests.get(f"{DB_URL}/db/pipeline-status", timeout=5).raise_for_status()
-        log.info("✔ DB microservice reachable")
-    except Exception as e:
-        log.error(f"✘ Cannot reach DB microservice: {e}")
-        log.error("  Start the DB service first, then run the controller.")
-        return
+    # Wait for all services to be ready before doing anything
+    wait_for_service("DB microservice", f"{DB_URL}/db/pipeline-status")
+    wait_for_service("Pipeline 2",      f"{P2_URL}/")
+    wait_for_service("Pipeline 3",      f"{P3_URL}/")
 
     # Start threads
     threading.Thread(target=p2_worker, daemon=True).start()

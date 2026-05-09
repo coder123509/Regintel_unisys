@@ -1,4 +1,4 @@
-google-generativeai==0.8.6
+groq==1.2.0
 transformers==4.38.2
 numpy<2
 pdfplumber>=0.10.0

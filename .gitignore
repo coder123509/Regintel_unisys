@@ -47,3 +47,6 @@ include/
 /workspace.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+backend/pipeline-1/legal_bert_local/
+backend/pipeline-1/data/pdfs/
+*.safetensors

@@ -462,3 +462,281 @@
 @media (max-width: 480px) {
   .overviewGrid { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* ── Pipeline tracker ───────────────────────────────── */
+.pipelineLayout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 480px;
+}
+
+.pipelineDocList {
+  border-right: 1px solid var(--c-border);
+  padding: 1rem 0;
+  overflow-y: auto;
+}
+
+.pipelineDocListTitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  padding: 0 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 0.5rem;
+}
+
+.pipelineDocBtn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--c-border-light);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: background var(--transition);
+  font-family: var(--font-body);
+}
+.pipelineDocBtn:hover { background: var(--c-bg); }
+.pipelineDocBtnActive {
+  background: var(--c-accent-light) !important;
+  border-left: 3px solid var(--c-accent);
+}
+
+.pipelineDocId {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.pipelineDocSource {
+  font-size: 0.68rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.pipelineTrackerArea {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* ── Tracker internals ──────────────────────────────── */
+.trackerWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.overallBar {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+}
+
+.overallBarTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.overallLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+
+.overallPct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+
+.overallTrack {
+  height: 8px;
+  background: var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.overallFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-accent), #27ae60);
+  border-radius: 4px;
+  transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Pipeline stage cards ───────────────────────────── */
+.pipelineCards {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pipelineCardRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pipelineCard {
+  width: 100%;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  transition: box-shadow var(--transition);
+}
+.pipelineCard:hover { box-shadow: var(--shadow-md); }
+
+.pcHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pcLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.pcIndex {
+  width: 32px;
+  height: 32px;
+  background: var(--c-accent);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.06em;
+}
+
+.pcLabel {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.pcSub {
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  margin-top: 0.1rem;
+}
+
+.pcBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.pcBadgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+.pcBarTrack {
+  height: 6px;
+  background: var(--c-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.pcBarFill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.pcSteps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.pcStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.pcStepDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pcStepLabel {
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.cardConnector {
+  padding: 0.5rem 0;
+  opacity: 0.6;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .pipelineLayout { grid-template-columns: 1fr; }
+  .pipelineDocList {
+    border-right: none;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  .pipelineDocBtn {
+    flex-shrink: 0;
+    width: auto;
+    border-bottom: none;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.875rem;
+  }
+  .pipelineDocBtnActive { border-left-width: 1px; border-top: 3px solid var(--c-accent); }
+  .pcSteps { grid-template-columns: repeat(3, 1fr); }
+  .pipelineTrackerArea { padding: 1.25rem; }
+}

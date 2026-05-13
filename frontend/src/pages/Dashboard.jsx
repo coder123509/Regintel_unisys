@@ -142,42 +142,263 @@ function OverviewPanel({ documents, risks, lastRefresh }) {
   )
 }
 
-function PipelineStatusSection({ documents }) {
-  if (!documents.length) return <EmptyState message="No documents found." />
+// ─────────────────────────────────────────────────────────
+// PipelineTracker + PipelineStatusSection
+// ─────────────────────────────────────────────────────────
+
+function PipelineTracker({ doc }) {
+  const [status, setStatus] = useState({
+    p1: 'checking',
+    p2: 'checking',
+    p3: 'checking',
+  })
+
+  useEffect(() => {
+    let interval;
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/pipeline-status/${doc.doc_id}`);
+        if (!res.ok) {
+          // Fallback to doc.status if pipeline_status row doesn't exist yet
+          const p1 =
+            doc.status === 'processed' ? 'completed' :
+            doc.status === 'ingesting' ? 'in_progress' :
+            doc.status === 'failed' ? 'failed' :
+            doc.status === 'duplicate' ? 'duplicate' : 'not_started';
+          
+          setStatus({ p1, p2: 'not_started', p3: 'not_started' });
+          return;
+        }
+
+        const data = await res.json();
+        if (!data) return;
+
+        const newStatus = {
+          p1: data.p1_status === 'processing' ? 'in_progress' : data.p1_status || 'not_started',
+          p2: data.p2_status === 'processing' ? 'in_progress' : data.p2_status || 'not_started',
+          p3: data.p3_status === 'processing' ? 'in_progress' : data.p3_status || 'not_started',
+        };
+
+        setStatus(newStatus);
+
+        // Stop polling if everything is final
+        const finalStates = ['completed', 'failed', 'duplicate'];
+        const allFinal = finalStates.includes(newStatus.p1) &&
+                         finalStates.includes(newStatus.p2) &&
+                         finalStates.includes(newStatus.p3);
+
+        if (allFinal && interval) {
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error('Failed to check pipeline status:', err);
+      }
+    };
+
+    checkStatus();
+    interval = setInterval(checkStatus, 5000);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [doc.doc_id, doc.status])
+
+  const statusMeta = {
+    completed:   { bg: '#e8f5e9', text: '#256029', dot: '#27ae60', bar: '#27ae60', pct: 100 },
+    in_progress: { bg: '#ebf0f7', text: '#1a3a5c', dot: '#2c5282', bar: '#2c5282', pct: 55  },
+    partial:     { bg: '#fff8e1', text: '#b7770d', dot: '#f39c12', bar: '#f39c12', pct: 70  },
+    failed:      { bg: '#fdecea', text: '#c0392b', dot: '#e74c3c', bar: '#e74c3c', pct: 100 },
+    duplicate:   { bg: '#f5f0e8', text: '#7a5c2e', dot: '#b5873c', bar: '#b5873c', pct: 100 },
+    not_started: { bg: '#f0ede8', text: '#7a7a7a', dot: '#c5bfb5', bar: '#e0dbd3', pct: 0   },
+    pending:     { bg: '#f0ede8', text: '#7a7a7a', dot: '#c5bfb5', bar: '#e0dbd3', pct: 0   },
+    checking:    { bg: '#f0ede8', text: '#7a7a7a', dot: '#c5bfb5', bar: '#e0dbd3', pct: 0   },
+  }
+
+  const stages = [
+    {
+      id: 'p1',
+      label: 'Pipeline 1',
+      sub: 'Ingestion & Clause Extraction',
+      status: status.p1,
+      detail: status.p1 === 'checking' ? 'Checking...' : status.p1.replace(/_/g, ' '),
+      steps: ['Fetch document', 'Deduplicate', 'Clean text', 'Extract clauses', 'Store & emit'],
+    },
+    {
+      id: 'p2',
+      label: 'Pipeline 2',
+      sub: 'RAG, Mapping & LLM Engine',
+      status: status.p2,
+      detail: status.p2 === 'checking' ? 'Checking...' : status.p2.replace(/_/g, ' '),
+      steps: ['Hybrid retrieval', 'Graph traversal', 'Semantic search', 'LLM mapping', 'Gap detection'],
+    },
+    {
+      id: 'p3',
+      label: 'Pipeline 3',
+      sub: 'Risk Scoring & Action Generation',
+      status: status.p3,
+      detail: status.p3 === 'checking' ? 'Checking...' : status.p3.replace(/_/g, ' '),
+      steps: ['Score severity', 'Score impact', 'Score urgency', 'Classify priority', 'Generate actions'],
+    },
+  ]
+
+  const completedCount = [status.p1, status.p2, status.p3].filter(s => s === 'completed').length
+  const overallPct = Math.round((completedCount / 3) * 100)
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Document ID</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Clauses</th>
-            <th>Published</th>
-            <th>Ingested</th>
-          </tr>
-        </thead>
-        <tbody>
-          {documents.map((doc, i) => (
-            <tr key={doc.doc_id || i} className={styles.tr}>
-              <td><code className={styles.code}>{doc.doc_id}</code></td>
-              <td className={styles.muted}>{doc.source_id || '—'}</td>
-              <td><StatusBadge status={doc.status} /></td>
-              <td className={styles.centered}>{doc.clauses_count ?? '—'}</td>
-              <td className={styles.muted}>
-                {doc.published_at ? new Date(doc.published_at).toLocaleDateString() : '—'}
-              </td>
-              <td className={styles.muted}>
-                {doc.ingested_at ? new Date(doc.ingested_at).toLocaleString() : '—'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className={styles.trackerWrap}>
+
+      {/* Overall bar */}
+      <div className={styles.overallBar}>
+        <div className={styles.overallBarTop}>
+          <span className={styles.overallLabel}>
+            Overall Progress — {doc.doc_id}
+          </span>
+          <span className={styles.overallPct}>{overallPct}% complete</span>
+        </div>
+        <div className={styles.overallTrack}>
+          <div className={styles.overallFill} style={{ width: `${overallPct}%` }} />
+        </div>
+        <div className={styles.overallStageRow}>
+          {stages.map((st, i) => {
+            const sm = statusMeta[st.status] || statusMeta.not_started
+            return (
+              <div key={i} className={styles.overallStagePill}
+                style={{ background: sm.bg, color: sm.text }}>
+                <span className={styles.overallStageDot} style={{ background: sm.dot }} />
+                {st.label}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Three stage cards */}
+      <div className={styles.pipelineCards}>
+        {stages.map((stage, idx) => {
+          const sm = statusMeta[stage.status] || statusMeta.not_started
+          const isLast = idx === stages.length - 1
+          const isPulsing = stage.status === 'in_progress' || stage.status === 'checking'
+
+          return (
+            <div key={stage.id} className={styles.pipelineCardRow}>
+              <div className={styles.pipelineCard}
+                style={{ borderTopColor: sm.bar, borderTopWidth: 3, borderTopStyle: 'solid' }}>
+
+                <div className={styles.pcHeader}>
+                  <div className={styles.pcLeft}>
+                    <div className={styles.pcIndex}>{String(idx + 1).padStart(2, '0')}</div>
+                    <div>
+                      <p className={styles.pcLabel}>{stage.label}</p>
+                      <p className={styles.pcSub}>{stage.sub}</p>
+                    </div>
+                  </div>
+                  <span className={styles.pcBadge}
+                    style={{ background: sm.bg, color: sm.text }}>
+                    <span className={styles.pcBadgeDot}
+                      style={{
+                        background: sm.dot,
+                        animation: isPulsing ? 'pulseDot 1.5s ease-in-out infinite' : 'none',
+                      }} />
+                    {stage.detail}
+                  </span>
+                </div>
+
+                <div className={styles.pcBarTrack}>
+                  <div className={styles.pcBarFill}
+                    style={{ width: `${sm.pct}%`, background: sm.bar }} />
+                </div>
+
+                <div className={styles.pcSteps}>
+                  {stage.steps.map((step, si) => {
+                    const done   = sm.pct === 100
+                    const active = stage.status === 'in_progress' && si === 2
+                    return (
+                      <div key={si} className={styles.pcStep}>
+                        <span className={styles.pcStepDot}
+                          style={{
+                            background: done || active ? sm.bar : 'var(--c-border)',
+                            opacity: done || active ? 1 : 0.4,
+                          }} />
+                        <span className={styles.pcStepLabel}
+                          style={{
+                            color: done || active ? 'var(--c-text-primary)' : 'var(--c-text-muted)',
+                            fontWeight: active ? 600 : 400,
+                          }}>
+                          {step}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {!isLast && (
+                <div className={styles.cardConnector}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                      d="M10 2V15M10 15L4 9M10 15L16 9"
+                      stroke={completedCount > idx ? '#27ae60' : 'var(--c-border)'}
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
+
+function PipelineStatusSection({ documents }) {
+  const [selected, setSelected] = useState(
+    documents.length > 0 ? documents[0] : null
+  )
+
+  useEffect(() => {
+    if (documents.length > 0 && !selected) {
+      setSelected(documents[0])
+    }
+  }, [documents])
+
+  if (!documents.length) return <EmptyState message="No documents found." />
+
+  return (
+    <div className={styles.pipelineLayout}>
+
+      {/* Left — document list */}
+      <div className={styles.pipelineDocList}>
+        <p className={styles.pipelineDocListTitle}>Select Document</p>
+        {documents.map(doc => (
+          <button
+            key={doc.doc_id}
+            className={`${styles.pipelineDocBtn} ${selected?.doc_id === doc.doc_id ? styles.pipelineDocBtnActive : ''}`}
+            onClick={() => setSelected(doc)}
+          >
+            <span className={styles.pipelineDocId}>{doc.doc_id}</span>
+            <span className={styles.pipelineDocSource}>{doc.source_id || '—'}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Right — tracker */}
+      <div className={styles.pipelineTrackerArea}>
+        {selected
+          ? <PipelineTracker key={selected.doc_id} doc={selected} />
+          : <EmptyState message="Select a document to view pipeline status." />
+        }
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// END REPLACE
+// ─────────────────────────────────────────────────────────
 
 function RiskSection({ documents }) {
   const [risks, setRisks] = useState([])

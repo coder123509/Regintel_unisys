@@ -77,7 +77,7 @@ root/
 See **[INSTRUCTIONS.md](./instruction.md)** for the full setup and run guide.
 
 ## Team Details
-Team members: Ahibhruth A, Amogh AP, Abhinav Krishna Rayachoti, Srikanth R
-Mentor: Dr. Mohana M , Dr Sudharshan 
-Institution: RV College of Engineering, Bengaluru
-Unisys Mentor - Siddharth Dash 
+### Team members: Ahibhruth A, Amogh AP, Abhinav Krishna Rayachoti, Srikanth R
+### Mentor: Dr. Mohana M , Dr Sudharshan 
+### Institution: RV College of Engineering, Bengaluru
+### Unisys Mentor - Siddharth Dash 

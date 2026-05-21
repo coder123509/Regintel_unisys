@@ -113,7 +113,7 @@
 }
 
 /* ── Overview stat cards ────────────────────────── */
-.overviewGrid {
+/* .overviewGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
@@ -154,6 +154,85 @@
   font-size: 0.7rem;
   font-weight: 400;
   color: var(--c-text-muted);
+} */
+
+/* ── Overview stat cards ────────────────────────── */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.statCard {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow var(--transition), transform var(--transition);
+  animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both;
+}
+.statCard:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.statCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+
+
+.statLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
+.statValue {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 0;
+}
+
+.statBarRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statBarTrack {
+  flex: 1;
+  height: 3px;
+  background: var(--c-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.statBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.statSub {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ── Tabs ───────────────────────────────────────── */

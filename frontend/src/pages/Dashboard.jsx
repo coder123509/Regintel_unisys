@@ -19,12 +19,44 @@ const ACTION_TYPE_COLOR = {
   checklist:     { bg: '#e8f5e9', text: '#256029' },
 }
 
-function StatCard({ label, value, sub, accent }) {
+// function StatCard({ label, value, sub, accent }) {
+//   return (
+//     <div className={styles.statCard} style={accent ? { borderTopColor: accent } : {}}>
+//       <p className={styles.statValue}>{value ?? '—'}</p>
+//       <p className={styles.statLabel}>{label}</p>
+//       {sub && <p className={styles.statSub}>{sub}</p>}
+//     </div>
+//   )
+// }
+
+const STAT_ICONS = {
+  'Total Documents':    { icon: 'ti-files',         bg: '#E6F1FB', color: '#0C447C', bar: '#185FA5', pct: 100 },
+  'Clauses Extracted':  { icon: 'ti-list-details',  bg: '#FAEEDA', color: '#633806', bar: '#BA7517', pct: 88  },
+  'Processing Success': { icon: 'ti-circle-check',  bg: '#EAF3DE', color: '#3B6D11', bar: '#639922', pct: 100 },
+  'High Risk Items':    { icon: 'ti-alert-triangle', bg: '#FCEBEB', color: '#791F1F', bar: '#A32D2D', pct: 40  },
+  'Last Pipeline Run':  { icon: 'ti-clock',         bg: '#EEEDFE', color: '#3C3489', bar: '#534AB7', pct: 75  },
+}
+
+function StatCard({ label, value, sub }) {
+  const meta = STAT_ICONS[label] || { icon: 'ti-chart-bar', bg: '#F1EFE8', color: '#444441', bar: '#888780', pct: 50 }
+  const isDate = typeof value === 'string' && value.includes('/')
   return (
-    <div className={styles.statCard} style={accent ? { borderTopColor: accent } : {}}>
-      <p className={styles.statValue}>{value ?? '—'}</p>
-      <p className={styles.statLabel}>{label}</p>
-      {sub && <p className={styles.statSub}>{sub}</p>}
+    <div className={styles.statCard}>
+      <div className={styles.statCardTop}>
+        <span className={styles.statLabel}>{label}</span>
+        {/* <div className={styles.statIcon} style={{ background: meta.bg }}>
+          <i className={`ti ${meta.icon}`} style={{ fontSize: 15, color: meta.color }} aria-hidden="true" />
+        </div> */}
+      </div>
+      <p className={styles.statValue} style={{ fontSize: isDate ? '1.1rem' : undefined }}>
+        {value ?? '—'}
+      </p>
+      <div className={styles.statBarRow}>
+        <div className={styles.statBarTrack}>
+          <div className={styles.statBarFill} style={{ width: `${meta.pct}%`, background: meta.bar }} />
+        </div>
+        {sub && <span className={styles.statSub}>{sub}</span>}
+      </div>
     </div>
   )
 }
@@ -197,7 +229,7 @@ function PipelineTracker({ doc }) {
     };
 
     checkStatus();
-    interval = setInterval(checkStatus, 5000);
+    interval = setInterval(checkStatus, 3000);
 
     return () => {
       if (interval) clearInterval(interval);
@@ -845,7 +877,7 @@ const fetchData = useCallback(async () => {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 30000)
+    const interval = setInterval(fetchData,  600000)
     return () => clearInterval(interval)
   }, [fetchData])
 

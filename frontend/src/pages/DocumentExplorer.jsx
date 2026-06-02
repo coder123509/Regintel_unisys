@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './DocumentExplorer.module.css'
+import Translate from '../components/Translate'
+import useTranslate from '../hooks/useTranslate'
 
 const BASE_URL = 'http://localhost:5000/db'
 
@@ -29,18 +32,26 @@ function Badge({ label, style }) {
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation()
   const s = status?.toLowerCase() || 'unknown'
   const c = STATUS_COLOR[s] || STATUS_COLOR.unknown
-  return <Badge label={s} style={{ background: c.bg, color: c.text }} />
+  
+  // Convert snake_case status to camelCase for i18n lookup
+  const i18nKey = s.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
+  const translatedS = t(`status.${i18nKey}`, status)
+  
+  return <Badge label={translatedS} style={{ background: c.bg, color: c.text }} />
 }
 
 function PriorityBadge({ priority }) {
+  const { t } = useTranslation()
   const p = priority?.toLowerCase() || 'low'
   const c = PRIORITY_COLOR[p] || PRIORITY_COLOR.low
+  const translatedP = t(`priority.${p}`, priority)
   return (
     <span className={styles.badge} style={{ background: c.bg, color: c.text }}>
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, display: 'inline-block', marginRight: 4 }} />
-      {p}
+      {translatedP}
     </span>
   )
 }
@@ -66,15 +77,18 @@ function Loader() {
   )
 }
 
-function EmptyState({ message }) {
-  return <div className={styles.empty}>{message}</div>
+function EmptyState({ message, i18nKey }) {
+  const { t } = useTranslation()
+  const translatedMessage = i18nKey ? t(i18nKey) : useTranslate(message, { dynamic: true })
+  return <div className={styles.empty}>{translatedMessage}</div>
 }
 
-function SectionBlock({ title, children, count }) {
+function SectionBlock({ title, children, count, i18nTitle }) {
+  const { t } = useTranslation()
   return (
     <div className={styles.block}>
       <div className={styles.blockHeader}>
-        <h3 className={styles.blockTitle}>{title}</h3>
+        <h3 className={styles.blockTitle}>{i18nTitle ? t(i18nTitle) : title}</h3>
         {count !== undefined && (
           <span className={styles.blockCount}>{count}</span>
         )}
@@ -87,50 +101,73 @@ function SectionBlock({ title, children, count }) {
 // ── Document detail sections ─────────────────────────────
 
 function DocMeta({ doc, context }) {
+  const { t } = useTranslation()
   const fields = [
-    { label: 'Document ID',   value: doc.doc_id },
-    { label: 'Source ID',     value: doc.source_id },
-    { label: 'Source URL',    value: doc.source_url },
-    { label: 'Status',        value: <StatusBadge status={doc.status} /> },
-    { label: 'Published',     value: doc.published_at ? new Date(doc.published_at).toLocaleString() : '—' },
-    { label: 'Ingested',      value: doc.ingested_at  ? new Date(doc.ingested_at).toLocaleString()  : '—' },
-    { label: 'Hash',          value: doc.hash },
+    { label: 'explorer.documentId',   value: doc.doc_id },
+    { label: 'explorer.sourceId',     value: doc.source_id },
+    { label: 'explorer.sourceUrl',    value: doc.source_url },
+    { label: 'explorer.status',        value: <StatusBadge status={doc.status} /> },
+    { label: 'explorer.published',     value: doc.published_at ? new Date(doc.published_at).toLocaleString() : '—' },
+    { label: 'explorer.ingested',      value: doc.ingested_at  ? new Date(doc.ingested_at).toLocaleString()  : '—' },
+    { label: 'explorer.hash',          value: doc.hash },
   ]
 
   return (
     <div className={styles.metaGrid}>
       <div className={styles.metaFields}>
         {fields.map((f, i) => (
-          <div key={i} className={styles.metaRow}>
-            <span className={styles.metaLabel}>{f.label}</span>
-            <span className={styles.metaValue}>
-              {typeof f.value === 'string'
-                ? <code className={styles.code}>{f.value || '—'}</code>
-                : f.value}
-            </span>
-          </div>
+          <MetaRow key={i} f={f} />
         ))}
       </div>
 
       {context && (
-        <div className={styles.contextCard}>
-          <p className={styles.contextTitle}>Document Summary</p>
-          <p className={styles.contextSummary}>{context.summary || '—'}</p>
-          {context.keywords?.length > 0 && (
-            <div className={styles.keywords}>
-              {context.keywords.map((k, i) => (
-                <span key={i} className={styles.keyword}>{k}</span>
-              ))}
-            </div>
-          )}
+        <ContextCard context={context} />
+      )}
+    </div>
+  )
+}
+
+function MetaRow({ f }) {
+  const { t } = useTranslation()
+  const translatedLabel = t(f.label)
+  return (
+    <div className={styles.metaRow}>
+      <span className={styles.metaLabel}>{translatedLabel}</span>
+      <span className={styles.metaValue}>
+        {typeof f.value === 'string'
+          ? <code className={styles.code}>{f.value || '—'}</code>
+          : f.value}
+      </span>
+    </div>
+  )
+}
+
+function ContextCard({ context }) {
+  const { t } = useTranslation()
+  const translatedSummary = useTranslate(context.summary, { dynamic: true })
+  return (
+    <div className={styles.contextCard}>
+      <p className={styles.contextTitle}>{t('explorer.documentSummary')}</p>
+      <p className={styles.contextSummary}>{translatedSummary || '—'}</p>
+      {context.keywords?.length > 0 && (
+        <div className={styles.keywords}>
+          {context.keywords.map((k, i) => (
+            <KeywordItem key={i} k={k} />
+          ))}
         </div>
       )}
     </div>
   )
 }
 
+function KeywordItem({ k }) {
+  const translatedKeyword = useTranslate(k, { dynamic: true })
+  return <span className={styles.keyword}>{translatedKeyword}</span>
+}
+
 function ClausesTable({ clauses }) {
-  if (!clauses.length) return <EmptyState message="No clauses found for this document." />
+  const { t } = useTranslation()
+  if (!clauses.length) return <EmptyState i18nKey="explorer.noClausesFound" message="No clauses found for this document." />
 
   const TYPE_COLOR = {
     obligation:  { bg: '#ebf0f7', text: '#1a3a5c' },
@@ -143,78 +180,16 @@ function ClausesTable({ clauses }) {
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Clause ID</th>
-            <th>Type</th>
-            <th>Text</th>
-            <th>Deadline</th>
-            <th>Confidence</th>
+            <th>{t('explorer.clauseId')}</th>
+            <th>{t('explorer.type')}</th>
+            <th>{t('explorer.text')}</th>
+            <th>{t('explorer.deadline')}</th>
+            <th>{t('explorer.confidence')}</th>
           </tr>
         </thead>
         <tbody>
-          {clauses.map((c, i) => {
-            const tc = TYPE_COLOR[c.type] || { bg: '#f0ede8', text: '#4a4a4a' }
-            return (
-              <tr key={c.clause_id || i} className={styles.tr}>
-                <td><code className={styles.code}>{c.clause_id}</code></td>
-                <td>
-                  <Badge label={c.type || '—'}
-                    style={{ background: tc.bg, color: tc.text }} />
-                </td>
-                <td className={styles.clauseText}>{c.text}</td>
-                <td className={styles.muted}>{c.deadline || '—'}</td>
-                <td>
-                  <ScoreBar value={c.extraction_confidence}
-                    color={
-                      (c.extraction_confidence || 0) > 0.8 ? '#27ae60'
-                      : (c.extraction_confidence || 0) > 0.5 ? '#f39c12'
-                      : '#e74c3c'
-                    }
-                  />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function MappingsTable({ mappings }) {
-  if (!mappings.length) return <EmptyState message="No policy mappings found. Run Pipeline 2 for this document." />
-
-  return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Clause</th>
-            <th>Mapped Policy</th>
-            <th>Department</th>
-            <th>Gap</th>
-            <th>Confidence</th>
-            <th>Status</th>
-            <th>Reasoning</th>
-          </tr>
-        </thead>
-        <tbody>
-          {mappings.map((m, i) => (
-            <tr key={m.clause_id || i} className={styles.tr}>
-              <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
-              <td className={styles.policyName}>{m.mapped_policy || '—'}</td>
-              <td className={styles.muted}>{m.department || '—'}</td>
-              <td>
-                <Badge
-                  label={m.gap_detected ? 'Gap Detected' : 'No Gap'}
-                  style={m.gap_detected
-                    ? { background: '#fdecea', color: '#c0392b' }
-                    : { background: '#e8f5e9', color: '#256029' }}
-                />
-              </td>
-              <td><ScoreBar value={m.mapping_confidence} color="#1a3a5c" /></td>
-              <td><StatusBadge status={m.mapping_status || m.status} /></td>
-              <td className={`${styles.muted} ${styles.reasoning}`}>{m.reasoning || '—'}</td>
-            </tr>
+          {clauses.map((c, i) => (
+            <ClauseTableRow key={c.clause_id || i} c={c} typeColor={TYPE_COLOR} />
           ))}
         </tbody>
       </table>
@@ -222,9 +197,95 @@ function MappingsTable({ mappings }) {
   )
 }
 
+function ClauseTableRow({ c, typeColor }) {
+  const { t } = useTranslation()
+  const tc = typeColor[c.type] || { bg: '#f0ede8', text: '#4a4a4a' }
+  const translatedType = t(`explorer.types.${c.type}`, c.type)
+  const translatedText = useTranslate(c.text, { dynamic: true })
+  const translatedDeadline = useTranslate(c.deadline, { dynamic: true })
+  
+  return (
+    <tr className={styles.tr}>
+      <td><code className={styles.code}>{c.clause_id}</code></td>
+      <td>
+        <Badge label={translatedType || '—'}
+          style={{ background: tc.bg, color: tc.text }} />
+      </td>
+      <td className={styles.clauseText}>{translatedText}</td>
+      <td className={styles.muted}>{translatedDeadline || '—'}</td>
+      <td>
+        <ScoreBar value={c.extraction_confidence}
+          color={
+            (c.extraction_confidence || 0) > 0.8 ? '#27ae60'
+            : (c.extraction_confidence || 0) > 0.5 ? '#f39c12'
+            : '#e74c3c'
+          }
+        />
+      </td>
+    </tr>
+  )
+}
+
+function MappingsTable({ mappings }) {
+  const { t } = useTranslation()
+  if (!mappings.length) return <EmptyState i18nKey="explorer.noMappingsFound" message="No policy mappings found. Run Pipeline 2 for this document." />
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>{t('dashboard.table.clause')}</th>
+            <th>{t('dashboard.table.mappedPolicy')}</th>
+            <th>{t('dashboard.table.department')}</th>
+            <th>{t('dashboard.table.gap')}</th>
+            <th>{t('dashboard.table.confidence')}</th>
+            <th>{t('dashboard.table.status')}</th>
+            <th>{t('dashboard.table.reasoning')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mappings.map((m, i) => (
+            <MappingTableRow key={m.clause_id || i} m={m} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function MappingTableRow({ m }) {
+  const { t } = useTranslation()
+  const translatedPolicy = useTranslate(m.mapped_policy, { dynamic: true })
+  const translatedDept = useTranslate(m.department, { dynamic: true })
+  const translatedReasoning = useTranslate(m.reasoning, { dynamic: true })
+  const gapKey = m.gap_detected ? 'gapDetected' : 'noGap'
+  const translatedGapLabel = t(`common.${gapKey}`)
+
+  return (
+    <tr className={styles.tr}>
+      <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
+      <td className={styles.policyName}>{translatedPolicy || '—'}</td>
+      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td>
+        <Badge
+          label={translatedGapLabel}
+          style={m.gap_detected
+            ? { background: '#fdecea', color: '#c0392b' }
+            : { background: '#e8f5e9', color: '#256029' }}
+        />
+      </td>
+      <td><ScoreBar value={m.mapping_confidence} color="#1a3a5c" /></td>
+      <td><StatusBadge status={m.mapping_status || m.status} /></td>
+      <td className={`${styles.muted} ${styles.reasoning}`}>{translatedReasoning || '—'}</td>
+    </tr>
+  )
+}
+
 function RiskPanel({ docRisk, clauseRisks }) {
+  const { t } = useTranslation()
   if (!docRisk && !clauseRisks.length)
-    return <EmptyState message="No risk data found. Run Pipeline 3 for this document." />
+    return <EmptyState i18nKey="explorer.noRiskDataFound" message="No risk data found. Run Pipeline 3 for this document." />
 
   const riskColor = v =>
     parseFloat(v) > 0.7 ? '#e74c3c'
@@ -234,34 +295,7 @@ function RiskPanel({ docRisk, clauseRisks }) {
   return (
     <div className={styles.riskPanelWrap}>
       {docRisk && (
-        <div className={styles.docRiskCard}>
-          <p className={styles.docRiskLabel}>Document-Level Risk</p>
-          <div className={styles.docRiskScores}>
-            <div className={styles.docRiskMain}>
-              <p className={styles.bigScore}
-                style={{ color: riskColor(docRisk.risk_score) }}>
-                {parseFloat(docRisk.risk_score).toFixed(2)}
-              </p>
-              <p className={styles.bigScoreLabel}>Overall Risk Score</p>
-              <PriorityBadge priority={docRisk.priority} />
-            </div>
-            <div className={styles.docRiskBreakdown}>
-              {[
-                { label: 'Severity', value: docRisk.severity },
-                { label: 'Impact',   value: docRisk.impact },
-                { label: 'Urgency',  value: docRisk.urgency },
-              ].map(item => (
-                <div key={item.label} className={styles.breakdownItem}>
-                  <p className={styles.breakdownLabel}>{item.label}</p>
-                  <ScoreBar value={item.value} color={riskColor(item.value)} />
-                </div>
-              ))}
-              <p className={styles.breakdownNote}>
-                Scored: {docRisk.scored_at ? new Date(docRisk.scored_at).toLocaleString() : '—'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <DocRiskCard docRisk={docRisk} riskColor={riskColor} />
       )}
 
       {clauseRisks.length > 0 && (
@@ -269,28 +303,18 @@ function RiskPanel({ docRisk, clauseRisks }) {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Clause</th>
-                <th>Risk Score</th>
-                <th>Severity</th>
-                <th>Impact</th>
-                <th>Urgency</th>
-                <th>Priority</th>
-                <th>Scored At</th>
+                <th>{t('dashboard.table.clause')}</th>
+                <th>{t('dashboard.table.riskScore')}</th>
+                <th>{t('dashboard.table.severity')}</th>
+                <th>{t('dashboard.table.impact')}</th>
+                <th>{t('dashboard.table.urgency')}</th>
+                <th>{t('dashboard.table.priority')}</th>
+                <th>{t('dashboard.table.scoredAt')}</th>
               </tr>
             </thead>
             <tbody>
               {clauseRisks.map((r, i) => (
-                <tr key={r.risk_id || i} className={styles.tr}>
-                  <td><code className={styles.code}>{r.clause_id}</code></td>
-                  <td><ScoreBar value={r.risk_score} color={riskColor(r.risk_score)} /></td>
-                  <td className={styles.centered}>{parseFloat(r.severity).toFixed(2)}</td>
-                  <td className={styles.centered}>{parseFloat(r.impact).toFixed(2)}</td>
-                  <td className={styles.centered}>{parseFloat(r.urgency).toFixed(2)}</td>
-                  <td><PriorityBadge priority={r.priority} /></td>
-                  <td className={styles.muted}>
-                    {r.scored_at ? new Date(r.scored_at).toLocaleString() : '—'}
-                  </td>
-                </tr>
+                <RiskTableRow key={r.risk_id || i} r={r} riskColor={riskColor} />
               ))}
             </tbody>
           </table>
@@ -300,9 +324,68 @@ function RiskPanel({ docRisk, clauseRisks }) {
   )
 }
 
+function DocRiskCard({ docRisk, riskColor }) {
+  const { t } = useTranslation()
+  return (
+    <div className={styles.docRiskCard}>
+      <p className={styles.docRiskLabel}>{t('explorer.documentLevelRisk')}</p>
+      <div className={styles.docRiskScores}>
+        <div className={styles.docRiskMain}>
+          <p className={styles.bigScore}
+            style={{ color: riskColor(docRisk.risk_score) }}>
+            {parseFloat(docRisk.risk_score).toFixed(2)}
+          </p>
+          <p className={styles.bigScoreLabel}>{t('explorer.overallRiskScore')}</p>
+          <PriorityBadge priority={docRisk.priority} />
+        </div>
+        <div className={styles.docRiskBreakdown}>
+          {[
+            { label: 'severity', value: docRisk.severity },
+            { label: 'impact',   value: docRisk.impact },
+            { label: 'urgency',  value: docRisk.urgency },
+          ].map(item => (
+            <BreakdownItem key={item.label} item={item} riskColor={riskColor} />
+          ))}
+          <p className={styles.breakdownNote}>
+            {t('explorer.scored')}: {docRisk.scored_at ? new Date(docRisk.scored_at).toLocaleString() : '—'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BreakdownItem({ item, riskColor }) {
+  const { t } = useTranslation()
+  const translatedLabel = t(`dashboard.table.${item.label}`)
+  return (
+    <div className={styles.breakdownItem}>
+      <p className={styles.breakdownLabel}>{translatedLabel}</p>
+      <ScoreBar value={item.value} color={riskColor(item.value)} />
+    </div>
+  )
+}
+
+function RiskTableRow({ r, riskColor }) {
+  return (
+    <tr className={styles.tr}>
+      <td><code className={styles.code}>{r.clause_id}</code></td>
+      <td><ScoreBar value={r.risk_score} color={riskColor(r.risk_score)} /></td>
+      <td className={styles.centered}>{parseFloat(r.severity).toFixed(2)}</td>
+      <td className={styles.centered}>{parseFloat(r.impact).toFixed(2)}</td>
+      <td className={styles.centered}>{parseFloat(r.urgency).toFixed(2)}</td>
+      <td><PriorityBadge priority={r.priority} /></td>
+      <td className={styles.muted}>
+        {r.scored_at ? new Date(r.scored_at).toLocaleString() : '—'}
+      </td>
+    </tr>
+  )
+}
+
 function ActionsTable({ actions }) {
+  const { t } = useTranslation()
   if (!actions.length)
-    return <EmptyState message="No actions generated yet. Run Pipeline 3 for this document." />
+    return <EmptyState i18nKey="explorer.noActionsGenerated" message="No actions generated yet. Run Pipeline 3 for this document." />
 
   const ACTION_COLOR = {
     policy_update: { bg: '#ebf0f7', text: '#1a3a5c' },
@@ -316,57 +399,73 @@ function ActionsTable({ actions }) {
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Action</th>
-            <th>Type</th>
-            <th>Department</th>
-            <th>Clause</th>
-            <th>Status</th>
-            <th>Generated</th>
+            <th>{t('dashboard.table.action')}</th>
+            <th>{t('dashboard.table.type')}</th>
+            <th>{t('dashboard.table.department')}</th>
+            <th>{t('dashboard.table.clause')}</th>
+            <th>{t('dashboard.table.status')}</th>
+            <th>{t('dashboard.table.generated')}</th>
           </tr>
         </thead>
         <tbody>
-          {actions.map((a, i) => {
-            const tc = ACTION_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
-            return (
-              <tr key={a.action_id || i} className={styles.tr}>
-                <td className={styles.actionText}>{a.action_text}</td>
-                <td>
-                  <Badge
-                    label={a.action_type?.replace('_', ' ') || '—'}
-                    style={{ background: tc.bg, color: tc.text }}
-                  />
-                </td>
-                <td className={styles.muted}>{a.department || '—'}</td>
-                <td><code className={styles.code}>{a.clause_id}</code></td>
-                <td><StatusBadge status={a.status} /></td>
-                <td className={styles.muted}>
-                  {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
-                </td>
-              </tr>
-            )
-          })}
+          {actions.map((a, i) => (
+            <ActionTableRow key={a.action_id || i} a={a} actionColor={ACTION_COLOR} />
+          ))}
         </tbody>
       </table>
     </div>
   )
 }
 
-function FullTextPanel({ text }) {
-  const [expanded, setExpanded] = useState(false)
-  if (!text) return <EmptyState message="No document text available." />
+function ActionTableRow({ a, actionColor }) {
+  const { t } = useTranslation()
+  const tc = actionColor[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
+  const translatedText = useTranslate(a.action_text, { dynamic: true })
+  const translatedType = useTranslate(a.action_type?.replace('_', ' '), { dynamic: true })
+  const translatedDept = useTranslate(a.department, { dynamic: true })
+  
+  return (
+    <tr className={styles.tr}>
+      <td className={styles.actionText}>{translatedText}</td>
+      <td>
+        <Badge
+          label={translatedType || '—'}
+          style={{ background: tc.bg, color: tc.text }}
+        />
+      </td>
+      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td><code className={styles.code}>{a.clause_id}</code></td>
+      <td><StatusBadge status={a.status} /></td>
+      <td className={styles.muted}>
+        {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
+      </td>
+    </tr>
+  )
+}
 
-  const preview = text.slice(0, 800)
-  const hasMore = text.length > 800
+function FullTextPanel({ text, visible }) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+  const translatedText = useTranslate(text, { dynamic: true, visible: visible && expanded })
+  
+  if (!text) return <EmptyState i18nKey="explorer.noDocumentText" message="No document text available." />
+
+  // If not expanded, we don't need to translate the full text, 
+  // but we might want a translated preview. 
+  // However, the requirement is to minimize tokens.
+  const content = translatedText || text
+  const preview = content.slice(0, 800)
+  const hasMore = content.length > 800
 
   return (
     <div className={styles.fullTextWrap}>
       <p className={styles.fullText}>
-        {expanded ? text : preview}
+        {expanded ? content : preview}
         {hasMore && !expanded && '...'}
       </p>
       {hasMore && (
         <button className={styles.expandBtn} onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Show less' : `Show full text (${text.length} characters)`}
+          {expanded ? t('explorer.showLess') : t('explorer.showFullText', { count: content.length })}
         </button>
       )}
     </div>
@@ -376,6 +475,7 @@ function FullTextPanel({ text }) {
 // ── Document detail view ─────────────────────────────────
 
 function DocumentDetail({ doc, onBack }) {
+  const { t } = useTranslation()
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -420,12 +520,12 @@ function DocumentDetail({ doc, onBack }) {
   }, [doc.doc_id])
 
   const tabs = [
-    { id: 'overview',  label: 'Overview' },
-    { id: 'clauses',   label: `Clauses${data ? ` (${data.clauses.length})` : ''}` },
-    { id: 'mappings',  label: `Policy Mappings${data ? ` (${data.mappings.length})` : ''}` },
-    { id: 'risk',      label: 'Risk Analysis' },
-    { id: 'actions',   label: `Actions${data ? ` (${data.actions.length})` : ''}` },
-    { id: 'fulltext',  label: 'Full Text' },
+    { id: 'overview',  label: t('explorer.tabs.overview') },
+    { id: 'clauses',   label: t('explorer.tabs.clauses'), count: data?.clauses.length },
+    { id: 'mappings',  label: t('explorer.tabs.mappings'), count: data?.mappings.length },
+    { id: 'risk',      label: t('explorer.tabs.risk') },
+    { id: 'actions',   label: t('explorer.tabs.actions'), count: data?.actions.length },
+    { id: 'fulltext',  label: t('explorer.tabs.fulltext') },
   ]
 
   return (
@@ -437,12 +537,12 @@ function DocumentDetail({ doc, onBack }) {
             <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5"
               strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          All Documents
+          {t('explorer.allDocuments')}
         </button>
         <div className={styles.detailMeta}>
           <div>
             <p className={styles.detailDocId}>{doc.doc_id}</p>
-            <p className={styles.detailSource}>{doc.source_id || 'No source ID'}</p>
+            <p className={styles.detailSource}>{doc.source_id || t('explorer.noSourceId')}</p>
           </div>
           <StatusBadge status={doc.status} />
         </div>
@@ -453,66 +553,57 @@ function DocumentDetail({ doc, onBack }) {
           {/* Quick stat strip */}
           <div className={styles.quickStats}>
             {[
-              { label: 'Clauses',        value: data.clauses.length },
-              { label: 'Mappings',       value: data.mappings.length },
-              { label: 'Actions',        value: data.actions.length },
-              { label: 'Clause Risks',   value: data.clauseRisks.length },
-              { label: 'Overall Risk',   value: data.docRisk ? parseFloat(data.docRisk.risk_score).toFixed(2) : '—' },
-              { label: 'Priority',       value: data.docRisk
+              { label: t('explorer.quickStats.clauses'),        value: data.clauses.length },
+              { label: t('explorer.quickStats.mappings'),       value: data.mappings.length },
+              { label: t('explorer.quickStats.actions'),        value: data.actions.length },
+              { label: t('explorer.quickStats.clauseRisks'),   value: data.clauseRisks.length },
+              { label: t('explorer.quickStats.overallRisk'),   value: data.docRisk ? parseFloat(data.docRisk.risk_score).toFixed(2) : '—' },
+              { label: t('explorer.quickStats.priority'),       value: data.docRisk
                   ? <PriorityBadge priority={data.docRisk.priority} />
                   : '—'
               },
             ].map((s, i) => (
-              <div key={i} className={styles.quickStat}>
-                <span className={styles.quickStatVal}>{s.value}</span>
-                <span className={styles.quickStatLabel}>{s.label}</span>
-              </div>
+              <QuickStat key={i} s={s} />
             ))}
           </div>
 
           {/* Tabs */}
           <div className={styles.tabs}>
             {tabs.map(t => (
-              <button
-                key={t.id}
-                className={`${styles.tab} ${activeTab === t.id ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                {t.label}
-              </button>
+              <TabButton key={t.id} t={t} activeTab={activeTab} setActiveTab={setActiveTab} />
             ))}
           </div>
 
           {/* Tab content */}
           <div className={styles.tabContent}>
             {activeTab === 'overview' && (
-              <SectionBlock title="Document Metadata">
+              <SectionBlock i18nTitle="explorer.documentMetadata">
                 <DocMeta doc={data.fullDoc || doc} context={data.context} />
               </SectionBlock>
             )}
             {activeTab === 'clauses' && (
-              <SectionBlock title="Extracted Clauses" count={data.clauses.length}>
+              <SectionBlock i18nTitle="explorer.extractedClauses" count={data.clauses.length}>
                 <ClausesTable clauses={data.clauses} />
               </SectionBlock>
             )}
             {activeTab === 'mappings' && (
-              <SectionBlock title="Policy Mappings" count={data.mappings.length}>
+              <SectionBlock i18nTitle="explorer.policyMappings" count={data.mappings.length}>
                 <MappingsTable mappings={data.mappings} />
               </SectionBlock>
             )}
             {activeTab === 'risk' && (
-              <SectionBlock title="Risk Analysis">
+              <SectionBlock i18nTitle="explorer.riskAnalysis">
                 <RiskPanel docRisk={data.docRisk} clauseRisks={data.clauseRisks} />
               </SectionBlock>
             )}
             {activeTab === 'actions' && (
-              <SectionBlock title="Generated Actions" count={data.actions.length}>
+              <SectionBlock i18nTitle="explorer.generatedActions" count={data.actions.length}>
                 <ActionsTable actions={data.actions} />
               </SectionBlock>
             )}
             {activeTab === 'fulltext' && (
-              <SectionBlock title="Full Document Text">
-                <FullTextPanel text={data.fullDoc?.full_text} />
+              <SectionBlock i18nTitle="explorer.fullDocumentText">
+                <FullTextPanel text={data.fullDoc?.full_text} visible={activeTab === 'fulltext'} />
               </SectionBlock>
             )}
           </div>
@@ -522,9 +613,31 @@ function DocumentDetail({ doc, onBack }) {
   )
 }
 
+function QuickStat({ s }) {
+  return (
+    <div className={styles.quickStat}>
+      <span className={styles.quickStatVal}>{s.value}</span>
+      <span className={styles.quickStatLabel}>{s.label}</span>
+    </div>
+  )
+}
+
+function TabButton({ t, activeTab, setActiveTab }) {
+  return (
+    <button
+      className={`${styles.tab} ${activeTab === t.id ? styles.tabActive : ''}`}
+      onClick={() => setActiveTab(t.id)}
+    >
+      {t.label}
+      {t.count !== undefined && ` (${t.count})`}
+    </button>
+  )
+}
+
 // ── Document list sidebar ────────────────────────────────
 
 function DocumentList({ documents, selected, onSelect, loading }) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
 
   const filtered = documents.filter(d =>
@@ -535,8 +648,8 @@ function DocumentList({ documents, selected, onSelect, loading }) {
   return (
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <p className={styles.sidebarTitle}>Documents</p>
-        <p className={styles.sidebarCount}>{documents.length} total</p>
+        <p className={styles.sidebarTitle}>{t('nav.documents')}</p>
+        <p className={styles.sidebarCount}>{documents.length} {t('explorer.total')}</p>
       </div>
 
       <div className={styles.searchWrap}>
@@ -546,7 +659,7 @@ function DocumentList({ documents, selected, onSelect, loading }) {
         </svg>
         <input
           className={styles.searchInput}
-          placeholder="Search documents..."
+          placeholder={t('explorer.searchDocuments')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -557,39 +670,49 @@ function DocumentList({ documents, selected, onSelect, loading }) {
         {!loading && filtered.length === 0 && (
           <EmptyState message="No documents match your search." />
         )}
-        {!loading && filtered.map(doc => {
-          const isActive = selected?.doc_id === doc.doc_id
-          const sc = STATUS_COLOR[doc.status] || STATUS_COLOR.unknown
-          return (
-            <button
-              key={doc.doc_id}
-              className={`${styles.listItem} ${isActive ? styles.listItemActive : ''}`}
-              onClick={() => onSelect(doc)}
-            >
-              <div className={styles.listItemTop}>
-                <span className={styles.listDocId}>{doc.doc_id}</span>
-                <span className={styles.listBadge}
-                  style={{ background: sc.bg, color: sc.text }}>
-                  {doc.status}
-                </span>
-              </div>
-              <p className={styles.listSource}>{doc.source_id || 'No source'}</p>
-              {doc.published_at && (
-                <p className={styles.listDate}>
-                  {new Date(doc.published_at).toLocaleDateString()}
-                </p>
-              )}
-            </button>
-          )
-        })}
+        {!loading && filtered.map(doc => (
+          <DocListItem key={doc.doc_id} doc={doc} selected={selected} onSelect={onSelect} />
+        ))}
       </div>
     </div>
+  )
+}
+
+function DocListItem({ doc, selected, onSelect }) {
+  const { t } = useTranslation()
+  const isActive = selected?.doc_id === doc.doc_id
+  const sc = STATUS_COLOR[doc.status] || STATUS_COLOR.unknown
+  
+  const i18nStatusKey = doc.status?.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
+  const translatedStatus = t(`status.${i18nStatusKey}`, doc.status)
+  const translatedSource = doc.source_id || t('explorer.noSource')
+  
+  return (
+    <button
+      className={`${styles.listItem} ${isActive ? styles.listItemActive : ''}`}
+      onClick={() => onSelect(doc)}
+    >
+      <div className={styles.listItemTop}>
+        <span className={styles.listDocId}>{doc.doc_id}</span>
+        <span className={styles.listBadge}
+          style={{ background: sc.bg, color: sc.text }}>
+          {translatedStatus}
+        </span>
+      </div>
+      <p className={styles.listSource}>{translatedSource}</p>
+      {doc.published_at && (
+        <p className={styles.listDate}>
+          {new Date(doc.published_at).toLocaleDateString()}
+        </p>
+      )}
+    </button>
   )
 }
 
 // ── Main page ────────────────────────────────────────────
 
 export default function DocumentExplorer() {
+  const { t } = useTranslation()
   const [documents, setDocuments] = useState([])
   const [selected, setSelected]   = useState(null)
   const [loading, setLoading]     = useState(true)
@@ -610,7 +733,7 @@ export default function DocumentExplorer() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selected])
 
   useEffect(() => { fetchDocuments() }, [fetchDocuments])
 
@@ -620,15 +743,14 @@ export default function DocumentExplorer() {
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderInner}>
           <div>
-            <p className={styles.eyebrow}>Document Explorer</p>
-            <h1 className={styles.pageTitle}>All Documents</h1>
+            <p className={styles.eyebrow}>{t('explorer.documentExplorer')}</p>
+            <h1 className={styles.pageTitle}>{t('explorer.allDocuments')}</h1>
             <p className={styles.pageSubtitle}>
-              Select a document from the list to view all associated clauses,
-              policy mappings, risk scores, and generated actions.
+              {t('explorer.sub')}
             </p>
           </div>
           <button className={styles.refreshBtn} onClick={fetchDocuments} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
+            {loading ? t('explorer.loading') : t('common.refresh')}
           </button>
         </div>
       </div>
@@ -636,7 +758,7 @@ export default function DocumentExplorer() {
       {error ? (
         <div className={styles.errorBanner}>
           <p>{error}</p>
-          <button onClick={fetchDocuments}>Retry</button>
+          <button onClick={fetchDocuments}>{t('common.retry')}</button>
         </div>
       ) : (
         <div className={styles.layout}>
@@ -651,7 +773,7 @@ export default function DocumentExplorer() {
               ? <DocumentDetail doc={selected} onBack={() => setSelected(null)} />
               : <div className={styles.placeholder}>
                   <p className={styles.placeholderText}>
-                    Select a document from the list to view its details.
+                    {t('explorer.selectDocumentPrompt')}
                   </p>
                 </div>
             }

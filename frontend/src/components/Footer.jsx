@@ -1,12 +1,15 @@
 import styles from './Footer.module.css'
+import { useLanguage } from '../context/LanguageContext'
 
 const links = {
-  Project: ['About', 'Features', 'Architecture', 'Pipelines'],
-  References: ['RBI Regulations', 'GDPR', 'EU AI Act', 'FDA AI Plan'],
-  Technology: ['Neo4j Graph DB', 'Apache Kafka', 'GPT-4 / Legal-BERT', 'RAG Pipeline'],
+  'footer.project': ['nav.about', 'nav.features', 'nav.architecture', 'nav.pipelines'],
+  'footer.references': ['footer.links.rbi', 'footer.links.gdpr', 'footer.links.euAiAct', 'footer.links.fda'],
+  'footer.technology': ['footer.links.neo4j', 'footer.links.kafka', 'footer.links.gpt4', 'footer.links.rag'],
 }
 
 export default function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className={styles.footer}>
       <div className={styles.top}>
@@ -15,26 +18,25 @@ export default function Footer() {
             <span className={styles.logoMark}>RI</span>
             <div>
               <span className={styles.logoText}>RegIntel Agent</span>
-              <p className={styles.logoTagline}>Autonomous Regulatory Compliance Intelligence</p>
+              <p className={styles.logoTagline}>{t('footer.tagline')}</p>
             </div>
           </div>
           <p className={styles.brandDesc}>
-            A multi-agent AI system developed at RV College of Engineering, Bengaluru,
-            for the Unisys Innovation Program 2026.
+            {t('footer.desc')}
           </p>
           <div className={styles.tags}>
-            <span className={styles.tag}>Agentic AI</span>
-            <span className={styles.tag}>Multi-Agent Systems</span>
+            <span className={styles.tag}>{t('about.keywords.agenticAi')}</span>
+            <span className={styles.tag}>{t('about.keywords.multiAgentSystems')}</span>
             <span className={styles.tag}>RegTech</span>
           </div>
         </div>
 
         <div className={styles.linkCols}>
-          {Object.entries(links).map(([group, items]) => (
-            <div key={group} className={styles.linkCol}>
-              <p className={styles.linkColTitle}>{group}</p>
+          {Object.entries(links).map(([groupKey, items]) => (
+            <div key={groupKey} className={styles.linkCol}>
+              <p className={styles.linkColTitle}>{t(groupKey)}</p>
               {items.map(item => (
-                <a key={item} href="#" className={styles.link}>{item}</a>
+                <a key={item} href="#" className={styles.link}>{t(item)}</a>
               ))}
             </div>
           ))}
@@ -43,12 +45,8 @@ export default function Footer() {
 
       <div className={styles.bottom}>
         <p className={styles.copy}>
-          &copy; 2026 RegIntel Agent — RV College of Engineering, Bengaluru.
-          Developed for the Unisys Innovation Program.
+          &copy; 2026 {t('footer.copy')}
         </p>
-        {/* <p className={styles.disclaimer}>
-          Research project. Not a commercial product.
-        </p> */}
       </div>
     </footer>
   )

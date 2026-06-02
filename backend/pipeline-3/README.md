@@ -29,13 +29,15 @@ Pipeline 3 follows a structured evaluation flow:
 ---
 ## 📂 File Inventory & Responsibilities
 ### ⚙️ Core Logic (Production APIs)
- File | Purpose 
-------|---------
- **`risk_engine.py`** | Risk scoring logic for clauses and document aggregation.
- **`action_generator.py`** | LLM-powered generation of actionable recommendations for detected gaps.
- **`app.py`** | FastAPI server providing the core Pipeline 3 endpoints (`/risk/analyze`, `/actions/generate`, `/dashboard/{doc_id}`).
- **`mock_pipeline2.py`** | Mock data provider to simulate Pipeline 2 output.
- **`test_pipeline3.py`** | Validation script to test endpoints locally.
+| File | Purpose |
+|------|---------|
+| **`risk_engine.py`** | Risk scoring logic for clauses and document aggregation. |
+| **`action_generator.py`** | LLM-powered generation of actionable recommendations for detected gaps. |
+| **`ml_risk_adapter.py`** | Surrogate RandomForest risk model + SHAP computation for clause-level explainability. |
+| **`explainability_provider.py`** | Hybrid explainability contract (deterministic + SHAP payload assembly). |
+| **`app.py`** | FastAPI server providing the core Pipeline 3 endpoints (`/risk/analyze`, `/actions/generate`, `/dashboard/{doc_id}`). |
+| **`tests/test_explainability_provider.py`** | Unit tests for the hybrid explainability contract. |
+| **`run_shap_demo.py`** | Tiny local runner that prints a SHAP payload sample. |
 ---
 ## 🚀 Quick Start Guide
 ### Prerequisites
@@ -53,6 +55,10 @@ Create a `.env` file in the `pipeline-3/` directory:
 ```env
 # Google AI Configuration for Action Generation
 GEMINI_API_KEY=your_gemini_api_key
+
+# Hybrid explainability toggles
+P3_ENABLE_SHAP=true
+P3_SHAP_MODEL=
 ```
 ### Step 3: Run the Server
 ```bash
@@ -100,6 +106,33 @@ When running `uvicorn app:app --port 8003`, the following endpoints are exposed:
   "high_risk_clauses": 4
 }
 ```
+### `GET /risk/explain/{doc_id}`
+**Output:** Returns a hybrid explainability object (deterministic scores + SHAP channel).
+```json
+{
+  "schema_version": "1.0",
+  "doc_id": "doc_123",
+  "mode": "hybrid",
+  "summary": { "gap_clauses": 2, "dominant_factor": "severity" },
+  "deterministic": { "gap_clauses": 2, "dominant_factor": "severity" },
+  "shap": {
+    "available": false,
+    "reason": "SHAP is disabled (set P3_ENABLE_SHAP=true to enable the provider).",
+    "model": null,
+    "base_value": null,
+    "global_importance": [],
+    "clause_values": []
+  }
+}
+```
+
+## 🔎 Hybrid Explainability Strategy
+- `deterministic`: always active and exact for the current weighted rule engine.
+- `shap`: powered by a real surrogate ML adapter (`RandomForestRegressor`) with SHAP values.
+- `shap.global_importance`: mean absolute SHAP across all clauses in the document.
+- `shap.clause_values`: per-clause SHAP contributions for each feature.
+- Set `P3_ENABLE_SHAP=false` to disable SHAP path and keep deterministic-only output.
+
 ---
 ## 🧪 Testing
 To test the pipeline standalone with mock datasets:
@@ -107,13 +140,23 @@ To test the pipeline standalone with mock datasets:
 python test_pipeline3.py
 ```
 This will run through internal scoring and action endpoints and output the simulated JSON responses.
+
+To validate the hybrid payload contract:
+```bash
+python -m unittest tests/test_explainability_provider.py
+```
+
+To run a tiny SHAP payload demo:
+```bash
+python run_shap_demo.py
+```
 ---
 ## 🛠️ Tech Stack
- Component | Technology 
------------|------------
- **Web Framework** | FastAPI 
- **Action Insights (LLM)** | Gemini 2.5 Flash 
- **Language** | Python 3.10+ 
+| Component | Technology |
+|-----------|------------|
+| **Web Framework** | FastAPI |
+| **Action Insights (LLM)** | Gemini 2.5 Flash |
+| **Language** | Python 3.10+ |
 ---
 ## 🚦 Git Workflow (Team Collaboration)
 1. **Pull Latest Main**:

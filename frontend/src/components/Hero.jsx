@@ -1,13 +1,16 @@
 import styles from './Hero.module.css'
+import { useLanguage } from '../context/LanguageContext'
 
 const floatingItems = [
-  { label: 'Clause Extracted', sub: 'Obligation · confidence', color: '#dff0e8', dot: '#2d6a4f' },
-  { label: 'Gap Detected', sub: 'Data Protection Policy', color: '#fff3d9', dot: '#b5873c' },
-  { label: 'Risk Score', sub: 'Priority: Low,Medium,High', color: '#ebf0f7', dot: '#1a3a5c' },
-  { label: 'Action Generated', sub: 'Draft policy update sent', color: '#f0ede8', dot: '#4a4a4a' },
+  { key: 'hero.clauseExtracted', subKey: 'hero.obligationConfidence', color: '#dff0e8', dot: '#2d6a4f' },
+  { key: 'hero.gapDetected', subKey: 'hero.dataProtectionPolicy', color: '#fff3d9', dot: '#b5873c' },
+  { key: 'hero.riskScore', subKey: 'hero.priorityLevels', color: '#ebf0f7', dot: '#1a3a5c' },
+  { key: 'hero.actionGenerated', subKey: 'hero.draftPolicyUpdate', color: '#f0ede8', dot: '#4a4a4a' },
 ]
 
 export default function Hero() {
+  const { t } = useLanguage()
+
   return (
     <section className={styles.hero}>
       <div className={styles.bgPattern} aria-hidden="true" />
@@ -15,42 +18,34 @@ export default function Hero() {
       <div className={styles.inner}>
         {/* LEFT — Text */}
         <div className={styles.left}>
-          {/* <div className={`${styles.badge} anim-fade-in`}>
-            <span className={styles.badgeDot} />
-            Unisys Innovation Program 2025
-          </div> */}
-
           <h1 className={`${styles.heading} anim-fade-up delay-1`}>
-            Autonomous<br />
-            <span className={styles.headingAccent}>Regulatory</span><br />
-            Update-to-Policy<br />
-            Translation Agent
+            {t('hero.autonomous')}<br />
+            <span className={styles.headingAccent}>{t('hero.regulatory')}</span><br />
+            {t('hero.updateToPolicy')}<br />
+            {t('hero.translationAgent')}
           </h1>
 
           <p className={`${styles.sub} anim-fade-up delay-2`}>
-            A multi-agent AI system for real-time regulatory compliance orchestration.
-            Transforming how enterprises detect, interpret, and respond to regulatory change.
+            {t('hero.sub')}
           </p>
 
           <div className={`${styles.actions} anim-fade-up delay-3`}>
-            <a href="#architecture" className={styles.btnPrimary}>View Architecture</a>
-            <a href="#pipelines" className={styles.btnSecondary}>Explore Pipelines</a>
+            <a href="#architecture" className={styles.btnPrimary}>{t('hero.viewArchitecture')}</a>
+            <a href="#pipelines" className={styles.btnSecondary}>{t('hero.explorePipelines')}</a>
           </div>
 
           <div className={`${styles.stats} anim-fade-up delay-4`}>
             <div className={styles.stat}>
               <span className={styles.statNum}>90%+</span>
-              <span className={styles.statLabel}>Extraction Accuracy</span>
+              <span className={styles.statLabel}>{t('hero.extractionAccuracy')}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.stat}>
-              {/* <span className={styles.statNum}>Quick</span>
-              <span className={styles.statLabel}>Response </span> */}
             </div>
             <div className={styles.statDivider} />
             <div className={styles.stat}>
               <span className={styles.statNum}>300–600%</span>
-              <span className={styles.statLabel}>Projected ROI</span>
+              <span className={styles.statLabel}>{t('hero.projectedRoi')}</span>
             </div>
           </div>
         </div>
@@ -63,16 +58,22 @@ export default function Hero() {
               <div className={styles.vcDots}>
                 <span /><span /><span />
               </div>
-              <span className={styles.vcTitle}>RegIntel Agent — Live Pipeline</span>
+              <span className={styles.vcTitle}>{t('hero.livePipeline')}</span>
             </div>
 
             {/* Pipeline visual */}
             <div className={styles.pipeline}>
-              {['Regulatory Source', 'Clause Extraction', 'Knowledge Graph', 'Risk Scoring', 'Action Output'].map((step, i) => (
+              {[
+                'hero.regulatorySource', 
+                'hero.clauseExtraction', 
+                'hero.knowledgeGraph', 
+                'hero.riskScoring', 
+                'hero.actionOutput'
+              ].map((key, i) => (
                 <div key={i} className={styles.pipelineRow}>
                   <div className={styles.pipelineStep} style={{ animationDelay: `${0.4 + i * 0.12}s` }}>
                     <span className={styles.pipelineNum}>{String(i + 1).padStart(2, '0')}</span>
-                    <span className={styles.pipelineLabel}>{step}</span>
+                    <span className={styles.pipelineLabel}>{t(key)}</span>
                     <span className={styles.pipelineDot} />
                   </div>
                   {i < 4 && <div className={styles.pipelineConnector} />}
@@ -93,19 +94,13 @@ export default function Hero() {
                 >
                   <span className={styles.floaterDot} style={{ background: item.dot }} />
                   <div>
-                    <p className={styles.floaterLabel}>{item.label}</p>
-                    <p className={styles.floaterSub}>{item.sub}</p>
+                    <p className={styles.floaterLabel}>{t(item.key)}</p>
+                    <p className={styles.floaterSub}>{t(item.subKey)}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Small accent card */}
-          {/* <div className={`${styles.accentCard} anim-fade-up delay-5`}> */}
-            {/* <p className={styles.accentNum}>3</p>
-            <p className={styles.accentLabel}>Integrated<br />Pipelines</p> */}
-          {/* </div> */}
         </div>
       </div>
     </section>

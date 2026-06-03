@@ -18,10 +18,12 @@ Flow per document (triggered by controller):
 
 import logging
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from risk_engine import calculate_aggregate_risk
 from action_generator import generate_actions
+from explainability_provider import build_explainability_payload
 from db_client import (
     get_clause_mappings,
     get_clauses,
@@ -40,6 +42,13 @@ logging.basicConfig(
 logger = logging.getLogger("Pipeline3")
 
 app = FastAPI(title="RegIntel Pipeline 3: Risk Scoring + Action Generation")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -136,6 +145,16 @@ async def analyze_document(doc_id: str):
     actions = generate_actions(clauses)
     logger.info(f"Generated {len(actions)} actions for {doc_id}")
 
+    explainability = build_explainability_payload(
+        doc_id=doc_id,
+        clauses=clauses,
+        clause_scores=clause_scores,
+        doc_score=doc_score,
+        doc_priority=doc_priority,
+        avg_breakdown=avg_breakdown,
+        actions=actions,
+    )
+
     # ── 7. Write actions to DB ────────────────────────────────────────────
     if actions:
         try:
@@ -159,6 +178,7 @@ async def analyze_document(doc_id: str):
         "total_clauses": len(clauses),
         "gaps":        gaps,
         "actions":     len(actions),
+        "explainability": explainability,
         "status":      "completed",
     }
 
@@ -192,6 +212,36 @@ async def get_dashboard(doc_id: str):
     except Exception:
         clause_risks = []
 
+    try:
+        mappings_resp = _session.get(_url(f"/db/mappings/document/{doc_id}"), timeout=10)
+        mappings_resp.raise_for_status()
+        mappings = mappings_resp.json()
+    except Exception:
+        mappings = []
+
+    try:
+        raw_clauses_resp = _session.get(_url(f"/db/documents/{doc_id}/clauses"), timeout=10)
+        raw_clauses_resp.raise_for_status()
+        raw_clauses = raw_clauses_resp.json()
+    except Exception:
+        raw_clauses = []
+
+    merged = _merge_clause_data(mappings, raw_clauses) if mappings else []
+
+    explainability = build_explainability_payload(
+        doc_id=doc_id,
+        clauses=merged,
+        clause_scores=clause_risks,
+        doc_score=float(risk_data.get("risk_score") or 0.0),
+        doc_priority=risk_data.get("priority") or "low",
+        avg_breakdown={
+            "severity": float(risk_data.get("severity") or 0.0),
+            "impact": float(risk_data.get("impact") or 0.0),
+            "urgency": float(risk_data.get("urgency") or 0.0),
+        },
+        actions=actions,
+    )
+
     high_risk = sum(1 for c in clause_risks if c.get("priority") == "high")
 
     return {
@@ -201,7 +251,65 @@ async def get_dashboard(doc_id: str):
         "actions_count":   len(actions),
         "high_risk_clauses": high_risk,
         "scored_at":       risk_data.get("scored_at"),
+        "explainability":   explainability,
     }
+
+
+@app.get("/risk/explain/{doc_id}")
+async def explain_document(doc_id: str):
+    """Read-only explainability payload for a previously analyzed document."""
+    from db_client import _session, _url
+
+    try:
+        risk_resp = _session.get(_url(f"/db/risk/{doc_id}"), timeout=10)
+        risk_resp.raise_for_status()
+        risk_data = risk_resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Risk data not found for {doc_id}: {e}")
+
+    try:
+        clause_risk_resp = _session.get(_url(f"/db/risk/{doc_id}/clauses"), timeout=10)
+        clause_risk_resp.raise_for_status()
+        clause_risks = clause_risk_resp.json()
+    except Exception:
+        clause_risks = []
+
+    try:
+        mappings_resp = _session.get(_url(f"/db/mappings/document/{doc_id}"), timeout=10)
+        mappings_resp.raise_for_status()
+        mappings = mappings_resp.json()
+    except Exception:
+        mappings = []
+
+    try:
+        raw_clauses_resp = _session.get(_url(f"/db/documents/{doc_id}/clauses"), timeout=10)
+        raw_clauses_resp.raise_for_status()
+        raw_clauses = raw_clauses_resp.json()
+    except Exception:
+        raw_clauses = []
+
+    try:
+        actions_resp = _session.get(_url(f"/db/actions/{doc_id}"), timeout=10)
+        actions_resp.raise_for_status()
+        actions = actions_resp.json()
+    except Exception:
+        actions = []
+
+    merged = _merge_clause_data(mappings, raw_clauses) if mappings else []
+
+    return build_explainability_payload(
+        doc_id=doc_id,
+        clauses=merged,
+        clause_scores=clause_risks,
+        doc_score=float(risk_data.get("risk_score") or 0.0),
+        doc_priority=risk_data.get("priority") or "low",
+        avg_breakdown={
+            "severity": float(risk_data.get("severity") or 0.0),
+            "impact": float(risk_data.get("impact") or 0.0),
+            "urgency": float(risk_data.get("urgency") or 0.0),
+        },
+        actions=actions,
+    )
 
 
 if __name__ == "__main__":

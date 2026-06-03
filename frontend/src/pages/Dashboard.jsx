@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import styles from './Dashboard.module.css'
-
+import Translate from '../components/Translate'
+import useTranslate from '../hooks/useTranslate'
 
 // ── CONFIG: point this at your backend ──────────────────
 const BASE_URL = 'http://localhost:5000/db'
@@ -19,59 +21,55 @@ const ACTION_TYPE_COLOR = {
   checklist:     { bg: '#e8f5e9', text: '#256029' },
 }
 
-// function StatCard({ label, value, sub, accent }) {
-//   return (
-//     <div className={styles.statCard} style={accent ? { borderTopColor: accent } : {}}>
-//       <p className={styles.statValue}>{value ?? '—'}</p>
-//       <p className={styles.statLabel}>{label}</p>
-//       {sub && <p className={styles.statSub}>{sub}</p>}
-//     </div>
-//   )
-// }
-
 const STAT_ICONS = {
-  'Total Documents':    { icon: 'ti-files',         bg: '#E6F1FB', color: '#0C447C', bar: '#185FA5', pct: 100 },
-  'Clauses Extracted':  { icon: 'ti-list-details',  bg: '#FAEEDA', color: '#633806', bar: '#BA7517', pct: 88  },
-  'Processing Success': { icon: 'ti-circle-check',  bg: '#EAF3DE', color: '#3B6D11', bar: '#639922', pct: 100 },
-  'High Risk Items':    { icon: 'ti-alert-triangle', bg: '#FCEBEB', color: '#791F1F', bar: '#A32D2D', pct: 40  },
-  'Last Pipeline Run':  { icon: 'ti-clock',         bg: '#EEEDFE', color: '#3C3489', bar: '#534AB7', pct: 75  },
+  'totalDocuments':    { icon: 'ti-files',         bg: '#E6F1FB', color: '#0C447C', bar: '#185FA5', pct: 100 },
+  'clausesExtracted':  { icon: 'ti-list-details',  bg: '#FAEEDA', color: '#633806', bar: '#BA7517', pct: 88  },
+  'processingSuccess': { icon: 'ti-circle-check',  bg: '#EAF3DE', color: '#3B6D11', bar: '#639922', pct: 100 },
+  'highRiskItems':    { icon: 'ti-alert-triangle', bg: '#FCEBEB', color: '#791F1F', bar: '#A32D2D', pct: 40  },
+  'lastPipelineRun':  { icon: 'ti-clock',         bg: '#EEEDFE', color: '#3C3489', bar: '#534AB7', pct: 75  },
 }
 
-function StatCard({ label, value, sub }) {
-  const meta = STAT_ICONS[label] || { icon: 'ti-chart-bar', bg: '#F1EFE8', color: '#444441', bar: '#888780', pct: 50 }
+function StatCard({ label, value, sub, i18nLabel, i18nSub }) {
+  const { t } = useTranslation()
+  const meta = STAT_ICONS[i18nLabel] || { icon: 'ti-chart-bar', bg: '#F1EFE8', color: '#444441', bar: '#888780', pct: 50 }
   const isDate = typeof value === 'string' && value.includes('/')
+  
+  const translatedLabel = t(`dashboard.${i18nLabel}`)
+  const translatedSub = i18nSub ? t(`dashboard.${i18nSub}`) : sub
+  const translatedValue = isDate ? value : value
+
   return (
     <div className={styles.statCard}>
       <div className={styles.statCardTop}>
-        <span className={styles.statLabel}>{label}</span>
-        {/* <div className={styles.statIcon} style={{ background: meta.bg }}>
-          <i className={`ti ${meta.icon}`} style={{ fontSize: 15, color: meta.color }} aria-hidden="true" />
-        </div> */}
+        <span className={styles.statLabel}>{translatedLabel}</span>
       </div>
       <p className={styles.statValue} style={{ fontSize: isDate ? '1.1rem' : undefined }}>
-        {value ?? '—'}
+        {translatedValue ?? '—'}
       </p>
       <div className={styles.statBarRow}>
         <div className={styles.statBarTrack}>
           <div className={styles.statBarFill} style={{ width: `${meta.pct}%`, background: meta.bar }} />
         </div>
-        {sub && <span className={styles.statSub}>{sub}</span>}
+        {translatedSub && <span className={styles.statSub}>{translatedSub}</span>}
       </div>
     </div>
   )
 }
 
 function PriorityBadge({ priority }) {
+  const { t } = useTranslation()
   const c = PRIORITY_COLOR[priority] || PRIORITY_COLOR.low
+  const translatedPriority = t(`priority.${priority}`)
   return (
     <span className={styles.badge} style={{ background: c.bg, color: c.text }}>
       <span className={styles.badgeDot} style={{ background: c.dot }} />
-      {priority}
+      {translatedPriority}
     </span>
   )
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation()
   const map = {
     processed:   { bg: '#e8f5e9', text: '#256029' },
     ingesting:   { bg: '#ebf0f7', text: '#1a3a5c' },
@@ -83,18 +81,24 @@ function StatusBadge({ status }) {
     completed:   { bg: '#e8f5e9', text: '#256029' },
   }
   const c = map[status] || { bg: '#f0ede8', text: '#4a4a4a' }
+  
+  // Convert snake_case status to camelCase for i18n lookup
+  const i18nKey = status.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
+  const translatedStatus = t(`status.${i18nKey}`, status)
+
   return (
     <span className={styles.badge} style={{ background: c.bg, color: c.text }}>
-      {status}
+      {translatedStatus}
     </span>
   )
 }
 
-function SectionHeader({ eyebrow, title }) {
+function SectionHeader({ eyebrow, title, i18nEyebrow, i18nTitle }) {
+  const { t } = useTranslation()
   return (
     <div className={styles.sectionHeader}>
-      <span className={styles.eyebrow}>{eyebrow}</span>
-      <h2 className={styles.sectionTitle}>{title}</h2>
+      <span className={styles.eyebrow}>{t(`dashboard.${i18nEyebrow}`)}</span>
+      <h2 className={styles.sectionTitle}>{t(`dashboard.${i18nTitle}`)}</h2>
     </div>
   )
 }
@@ -108,19 +112,23 @@ function Loader() {
 }
 
 function EmptyState({ message }) {
-  return <div className={styles.empty}>{message}</div>
+  const translatedMessage = useTranslate(message, { dynamic: true })
+  return <div className={styles.empty}>{translatedMessage}</div>
 }
 
 function ErrorState({ message, onRetry }) {
+  const { t } = useTranslation()
+  const translatedMessage = useTranslate(message, { dynamic: true })
   return (
     <div className={styles.errorState}>
-      <p>{message}</p>
-      {onRetry && <button className={styles.retryBtn} onClick={onRetry}>Retry</button>}
+      <p>{translatedMessage}</p>
+      {onRetry && <button className={styles.retryBtn} onClick={onRetry}>{t('common.retry')}</button>}
     </div>
   )
 }
 
 function OverviewPanel({ documents, risks, lastRefresh }) {
+  const { t } = useTranslation()
   const [clauseCount, setClauseCount] = useState(0)
   const [loadingClauses, setLoadingClauses] = useState(true)
 
@@ -160,25 +168,28 @@ function OverviewPanel({ documents, risks, lastRefresh }) {
 
   return (
     <div className={styles.overviewGrid}>
-      <StatCard label="Total Documents" value={total} sub="All time" accent="#1a3a5c" />
+      <StatCard i18nLabel="totalDocuments" i18nSub="allTime" value={total} accent="#1a3a5c" />
       <StatCard
-        label="Clauses Extracted"
+        i18nLabel="clausesExtracted"
+        i18nSub="acrossAllDocuments"
         value={loadingClauses ? '...' : clauseCount}
-        sub="Across all documents"
         accent="#b5873c"
       />
-      <StatCard label="Processing Success" value={`${successRate}%`} sub={`${failed} failed`} accent="#27ae60" />
-      <StatCard label="High Risk Items" value={highRisk} sub="Require attention" accent="#e74c3c" />
-      <StatCard label="Last Pipeline Run" value={lastRun} sub="Time of last refresh" accent="#2c5282" />
+      <StatCard 
+        i18nLabel="processingSuccess" 
+        i18nSub="failed" 
+        sub={`${failed} ${t('status.failed')}`}
+        value={`${successRate}%`} 
+        accent="#27ae60" 
+      />
+      <StatCard i18nLabel="highRiskItems" i18nSub="requireAttention" value={highRisk} accent="#e74c3c" />
+      <StatCard i18nLabel="lastPipelineRun" i18nSub="timeOfLastRefresh" value={lastRun} accent="#2c5282" />
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────
-// PipelineTracker + PipelineStatusSection
-// ─────────────────────────────────────────────────────────
-
 function PipelineTracker({ doc }) {
+  const { t } = useTranslation()
   const [status, setStatus] = useState({
     p1: 'checking',
     p2: 'checking',
@@ -187,12 +198,10 @@ function PipelineTracker({ doc }) {
 
   useEffect(() => {
     let interval;
-
     const checkStatus = async () => {
       try {
         const res = await fetch(`${BASE_URL}/pipeline-status/${doc.doc_id}`);
         if (!res.ok) {
-          // Fallback to doc.status if pipeline_status row doesn't exist yet
           const p1 =
             doc.status === 'processed' ? 'completed' :
             doc.status === 'ingesting' ? 'in_progress' :
@@ -214,7 +223,6 @@ function PipelineTracker({ doc }) {
 
         setStatus(newStatus);
 
-        // Stop polling if everything is final
         const finalStates = ['completed', 'failed', 'duplicate'];
         const allFinal = finalStates.includes(newStatus.p1) &&
                          finalStates.includes(newStatus.p2) &&
@@ -250,27 +258,27 @@ function PipelineTracker({ doc }) {
   const stages = [
     {
       id: 'p1',
-      label: 'Pipeline 1',
-      sub: 'Ingestion & Clause Extraction',
+      label: t('dashboard.pipelines.p1.label'),
+      sub: t('dashboard.pipelines.p1.sub'),
       status: status.p1,
-      detail: status.p1 === 'checking' ? 'Checking...' : status.p1.replace(/_/g, ' '),
-      steps: ['Fetch document', 'Deduplicate', 'Clean text', 'Extract clauses', 'Store & emit'],
+      detail: status.p1 === 'checking' ? t('dashboard.checking') : status.p1.replace(/_/g, ' '),
+      steps: t('dashboard.pipelines.p1.steps', { returnObjects: true }) || [],
     },
     {
       id: 'p2',
-      label: 'Pipeline 2',
-      sub: 'RAG, Mapping & LLM Engine',
+      label: t('dashboard.pipelines.p2.label'),
+      sub: t('dashboard.pipelines.p2.sub'),
       status: status.p2,
-      detail: status.p2 === 'checking' ? 'Checking...' : status.p2.replace(/_/g, ' '),
-      steps: ['Hybrid retrieval', 'Graph traversal', 'Semantic search', 'LLM mapping', 'Gap detection'],
+      detail: status.p2 === 'checking' ? t('dashboard.checking') : status.p2.replace(/_/g, ' '),
+      steps: t('dashboard.pipelines.p2.steps', { returnObjects: true }) || [],
     },
     {
       id: 'p3',
-      label: 'Pipeline 3',
-      sub: 'Risk Scoring & Action Generation',
+      label: t('dashboard.pipelines.p3.label'),
+      sub: t('dashboard.pipelines.p3.sub'),
       status: status.p3,
-      detail: status.p3 === 'checking' ? 'Checking...' : status.p3.replace(/_/g, ' '),
-      steps: ['Score severity', 'Score impact', 'Score urgency', 'Classify priority', 'Generate actions'],
+      detail: status.p3 === 'checking' ? t('dashboard.checking') : status.p3.replace(/_/g, ' '),
+      steps: t('dashboard.pipelines.p3.steps', { returnObjects: true }) || [],
     },
   ]
 
@@ -279,14 +287,12 @@ function PipelineTracker({ doc }) {
 
   return (
     <div className={styles.trackerWrap}>
-
-      {/* Overall bar */}
       <div className={styles.overallBar}>
         <div className={styles.overallBarTop}>
           <span className={styles.overallLabel}>
-            Overall Progress — {doc.doc_id}
+            {t('dashboard.overallProgress')} — {doc.doc_id}
           </span>
-          <span className={styles.overallPct}>{overallPct}% complete</span>
+          <span className={styles.overallPct}>{overallPct}% {t('dashboard.complete')}</span>
         </div>
         <div className={styles.overallTrack}>
           <div className={styles.overallFill} style={{ width: `${overallPct}%` }} />
@@ -305,12 +311,14 @@ function PipelineTracker({ doc }) {
         </div>
       </div>
 
-      {/* Three stage cards */}
       <div className={styles.pipelineCards}>
         {stages.map((stage, idx) => {
           const sm = statusMeta[stage.status] || statusMeta.not_started
           const isLast = idx === stages.length - 1
           const isPulsing = stage.status === 'in_progress' || stage.status === 'checking'
+          
+          const i18nStatusKey = stage.status.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
+          const translatedDetail = stage.status === 'checking' ? t('dashboard.checking') : t(`status.${i18nStatusKey}`, stage.detail)
 
           return (
             <div key={stage.id} className={styles.pipelineCardRow}>
@@ -332,7 +340,7 @@ function PipelineTracker({ doc }) {
                         background: sm.dot,
                         animation: isPulsing ? 'pulseDot 1.5s ease-in-out infinite' : 'none',
                       }} />
-                    {stage.detail}
+                    {translatedDetail}
                   </span>
                 </div>
 
@@ -345,22 +353,7 @@ function PipelineTracker({ doc }) {
                   {stage.steps.map((step, si) => {
                     const done   = sm.pct === 100
                     const active = stage.status === 'in_progress' && si === 2
-                    return (
-                      <div key={si} className={styles.pcStep}>
-                        <span className={styles.pcStepDot}
-                          style={{
-                            background: done || active ? sm.bar : 'var(--c-border)',
-                            opacity: done || active ? 1 : 0.4,
-                          }} />
-                        <span className={styles.pcStepLabel}
-                          style={{
-                            color: done || active ? 'var(--c-text-primary)' : 'var(--c-text-muted)',
-                            fontWeight: active ? 600 : 400,
-                          }}>
-                          {step}
-                        </span>
-                      </div>
-                    )
+                    return <StepItem key={si} step={step} done={done} active={active} sm={sm} />
                   })}
                 </div>
               </div>
@@ -386,7 +379,27 @@ function PipelineTracker({ doc }) {
   )
 }
 
+function StepItem({ step, done, active, sm }) {
+  return (
+    <div className={styles.pcStep}>
+      <span className={styles.pcStepDot}
+        style={{
+          background: done || active ? sm.bar : 'var(--c-border)',
+          opacity: done || active ? 1 : 0.4,
+        }} />
+      <span className={styles.pcStepLabel}
+        style={{
+          color: done || active ? 'var(--c-text-primary)' : 'var(--c-text-muted)',
+          fontWeight: active ? 600 : 400,
+        }}>
+        {step}
+      </span>
+    </div>
+  )
+}
+
 function PipelineStatusSection({ documents }) {
+  const { t } = useTranslation()
   const [selected, setSelected] = useState(
     documents.length > 0 ? documents[0] : null
   )
@@ -397,14 +410,12 @@ function PipelineStatusSection({ documents }) {
     }
   }, [documents])
 
-  if (!documents.length) return <EmptyState message="No documents found." />
+  if (!documents.length) return <EmptyState message={t('dashboard.noDocumentsFound')} />
 
   return (
     <div className={styles.pipelineLayout}>
-
-      {/* Left — document list */}
       <div className={styles.pipelineDocList}>
-        <p className={styles.pipelineDocListTitle}>Select Document</p>
+        <p className={styles.pipelineDocListTitle}>{t('dashboard.selectDocument')}</p>
         {documents.map(doc => (
           <button
             key={doc.doc_id}
@@ -417,22 +428,18 @@ function PipelineStatusSection({ documents }) {
         ))}
       </div>
 
-      {/* Right — tracker */}
       <div className={styles.pipelineTrackerArea}>
         {selected
           ? <PipelineTracker key={selected.doc_id} doc={selected} />
-          : <EmptyState message="Select a document to view pipeline status." />
+          : <EmptyState message={t('dashboard.selectADocumentToViewPipelineStatus')} />
         }
       </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────
-// END REPLACE
-// ─────────────────────────────────────────────────────────
-
 function RiskSection({ documents }) {
+  const { t } = useTranslation()
   const [risks, setRisks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -467,13 +474,13 @@ function RiskSection({ documents }) {
 
         setRisks([...docRisks, ...clauseRisks])
       } catch {
-        setError('Failed to load risk data.')
+        setError(t('dashboard.failedToLoadRiskData'))
       } finally {
         setLoading(false)
       }
     }
     fetchAll()
-  }, [documents])
+  }, [documents, t])
 
   const dist = { high: 0, medium: 0, low: 0 }
   risks.forEach(r => { if (r.priority in dist) dist[r.priority]++ })
@@ -481,40 +488,36 @@ function RiskSection({ documents }) {
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
-  if (!risks.length) return <EmptyState message="No risk data available yet." />
+  if (!risks.length) return <EmptyState message={t('dashboard.noRiskDataAvailableYet')} />
 
   return (
     <div className={styles.riskLayout}>
       <div className={styles.riskDistCard}>
         <p className={styles.cardLabel}>
-          Risk Distribution — {risks.length} entries
-          ({risks.filter(r => r._level === 'document').length} document-level,{' '}
-          {risks.filter(r => r._level === 'clause').length} clause-level)
+          {t('dashboard.riskDistribution')} — {risks.length} {t('dashboard.entries')}
+          ({risks.filter(r => r._level === 'document').length} {t('dashboard.documentLevel')},{' '}
+          {risks.filter(r => r._level === 'clause').length} {t('dashboard.clauseLevel')})
         </p>
         <div className={styles.distBar}>
           {dist.high > 0 && (
             <div className={styles.distSegHigh}
               style={{ width: `${(dist.high / total) * 100}%` }}
-              title={`High: ${dist.high}`} />
+              title={`${t('priority.high')}: ${dist.high}`} />
           )}
           {dist.medium > 0 && (
             <div className={styles.distSegMed}
               style={{ width: `${(dist.medium / total) * 100}%` }}
-              title={`Medium: ${dist.medium}`} />
+              title={`${t('priority.medium')}: ${dist.medium}`} />
           )}
           {dist.low > 0 && (
             <div className={styles.distSegLow}
               style={{ width: `${(dist.low / total) * 100}%` }}
-              title={`Low: ${dist.low}`} />
+              title={`${t('priority.low')}: ${dist.low}`} />
           )}
         </div>
         <div className={styles.distLegend}>
           {['high', 'medium', 'low'].map(p => (
-            <div key={p} className={styles.legendItem}>
-              <span className={styles.legendDot} style={{ background: PRIORITY_COLOR[p].dot }} />
-              <span className={styles.legendLabel}>{p}</span>
-              <span className={styles.legendCount}>{dist[p]}</span>
-            </div>
+            <LegendItem key={p} p={p} count={dist[p]} />
           ))}
         </div>
       </div>
@@ -523,59 +526,20 @@ function RiskSection({ documents }) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Level</th>
-              <th>Document</th>
-              <th>Clause</th>
-              <th>Risk Score</th>
-              <th>Severity</th>
-              <th>Impact</th>
-              <th>Urgency</th>
-              <th>Priority</th>
-              <th>Scored At</th>
+              <th>{t('dashboard.table.level')}</th>
+              <th>{t('dashboard.table.document')}</th>
+              <th>{t('dashboard.table.clause')}</th>
+              <th>{t('dashboard.table.riskScore')}</th>
+              <th>{t('dashboard.table.severity')}</th>
+              <th>{t('dashboard.table.impact')}</th>
+              <th>{t('dashboard.table.urgency')}</th>
+              <th>{t('dashboard.table.priority')}</th>
+              <th>{t('dashboard.table.scoredAt')}</th>
             </tr>
           </thead>
           <tbody>
             {risks.map((r, i) => (
-              <tr key={r.risk_id || i} className={styles.tr}>
-                <td>
-                  <span className={styles.badge} style={
-                    r._level === 'document'
-                      ? { background: '#ebf0f7', color: '#1a3a5c' }
-                      : { background: '#f0ede8', color: '#4a4a4a' }
-                  }>
-                    {r._level}
-                  </span>
-                </td>
-                <td><code className={styles.code}>{r.doc_id}</code></td>
-                <td>
-                  {r.clause_id
-                    ? <code className={styles.code}>{r.clause_id}</code>
-                    : <span className={styles.muted}>—</span>
-                  }
-                </td>
-                <td>
-                  <div className={styles.scoreWrap}>
-                    <div className={styles.scoreBar}>
-                      <div className={styles.scoreFill} style={{
-                        width: `${Math.round(parseFloat(r.risk_score) * 100)}%`,
-                        background: parseFloat(r.risk_score) > 0.7
-                          ? '#e74c3c'
-                          : parseFloat(r.risk_score) > 0.3
-                          ? '#f39c12'
-                          : '#27ae60',
-                      }} />
-                    </div>
-                    <span className={styles.scoreNum}>{parseFloat(r.risk_score).toFixed(2)}</span>
-                  </div>
-                </td>
-                <td className={styles.centered}>{parseFloat(r.severity).toFixed(2)}</td>
-                <td className={styles.centered}>{parseFloat(r.impact).toFixed(2)}</td>
-                <td className={styles.centered}>{parseFloat(r.urgency).toFixed(2)}</td>
-                <td><PriorityBadge priority={r.priority} /></td>
-                <td className={styles.muted}>
-                  {r.scored_at ? new Date(r.scored_at).toLocaleString() : '—'}
-                </td>
-              </tr>
+              <RiskTableRow key={r.risk_id || i} r={r} />
             ))}
           </tbody>
         </table>
@@ -584,7 +548,67 @@ function RiskSection({ documents }) {
   )
 }
 
+function LegendItem({ p, count }) {
+  const { t } = useTranslation()
+  const translatedP = t(`priority.${p}`)
+  return (
+    <div className={styles.legendItem}>
+      <span className={styles.legendDot} style={{ background: PRIORITY_COLOR[p].dot }} />
+      <span className={styles.legendLabel}>{translatedP}</span>
+      <span className={styles.legendCount}>{count}</span>
+    </div>
+  )
+}
+
+function RiskTableRow({ r }) {
+  const { t } = useTranslation()
+  const translatedLevel = t(`dashboard.${r._level}Level`)
+  return (
+    <tr className={styles.tr}>
+      <td>
+        <span className={styles.badge} style={
+          r._level === 'document'
+            ? { background: '#ebf0f7', color: '#1a3a5c' }
+            : { background: '#f0ede8', color: '#4a4a4a' }
+        }>
+          {translatedLevel}
+        </span>
+      </td>
+      <td><code className={styles.code}>{r.doc_id}</code></td>
+      <td>
+        {r.clause_id
+          ? <code className={styles.code}>{r.clause_id}</code>
+          : <span className={styles.muted}>—</span>
+        }
+      </td>
+      <td>
+        <div className={styles.scoreWrap}>
+          <div className={styles.scoreBar}>
+            <div className={styles.scoreFill} style={{
+              width: `${Math.round(parseFloat(r.risk_score) * 100)}%`,
+              background: parseFloat(r.risk_score) > 0.7
+                ? '#e74c3c'
+                : parseFloat(r.risk_score) > 0.3
+                ? '#f39c12'
+                : '#27ae60',
+            }} />
+          </div>
+          <span className={styles.scoreNum}>{parseFloat(r.risk_score).toFixed(2)}</span>
+        </div>
+      </td>
+      <td className={styles.centered}>{parseFloat(r.severity).toFixed(2)}</td>
+      <td className={styles.centered}>{parseFloat(r.impact).toFixed(2)}</td>
+      <td className={styles.centered}>{parseFloat(r.urgency).toFixed(2)}</td>
+      <td><PriorityBadge priority={r.priority} /></td>
+      <td className={styles.muted}>
+        {r.scored_at ? new Date(r.scored_at).toLocaleString() : '—'}
+      </td>
+    </tr>
+  )
+}
+
 function ActionsSection({ documents }) {
+  const { t } = useTranslation()
   const [actions, setActions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -604,62 +628,71 @@ function ActionsSection({ documents }) {
         const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
         setActions(all)
       } catch {
-        setError('Failed to load actions.')
+        setError(t('dashboard.failedToLoadActions'))
       } finally {
         setLoading(false)
       }
     }
     fetchAll()
-  }, [documents])
+  }, [documents, t])
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
-  if (!actions.length) return <EmptyState message="No actions generated yet." />
+  if (!actions.length) return <EmptyState message={t('dashboard.noActionsGeneratedYet')} />
 
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Action</th>
-            <th>Type</th>
-            <th>Department</th>
-            <th>Clause</th>
-            <th>Status</th>
-            <th>Generated</th>
+            <th>{t('dashboard.table.action')}</th>
+            <th>{t('dashboard.table.type')}</th>
+            <th>{t('dashboard.table.department')}</th>
+            <th>{t('dashboard.table.clause')}</th>
+            <th>{t('dashboard.table.status')}</th>
+            <th>{t('dashboard.table.generated')}</th>
           </tr>
         </thead>
         <tbody>
-          {actions.map((a, i) => {
-            const tc = ACTION_TYPE_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
-            return (
-              <tr key={a.action_id || i} className={styles.tr}>
-                <td className={styles.actionText}>{a.action_text}</td>
-                <td>
-                  <span className={styles.badge} style={{ background: tc.bg, color: tc.text }}>
-                    {a.action_type?.replace('_', ' ')}
-                  </span>
-                </td>
-                <td className={styles.muted}>{a.department || '—'}</td>
-                <td><code className={styles.code}>{a.clause_id}</code></td>
-                <td><StatusBadge status={a.status} /></td>
-                <td className={styles.muted}>
-                  {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
-                </td>
-              </tr>
-            )
-          })}
+          {actions.map((a, i) => (
+            <ActionTableRow key={a.action_id || i} a={a} />
+          ))}
         </tbody>
       </table>
     </div>
   )
 }
 
+function ActionTableRow({ a }) {
+  const { t } = useTranslation()
+  const tc = ACTION_TYPE_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
+  const translatedText = useTranslate(a.action_text, { dynamic: true })
+  const translatedType = useTranslate(a.action_type?.replace('_', ' '), { dynamic: true })
+  const translatedDept = useTranslate(a.department, { dynamic: true })
+
+  return (
+    <tr className={styles.tr}>
+      <td className={styles.actionText}>{translatedText}</td>
+      <td>
+        <span className={styles.badge} style={{ background: tc.bg, color: tc.text }}>
+          {translatedType}
+        </span>
+      </td>
+      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td><code className={styles.code}>{a.clause_id}</code></td>
+      <td><StatusBadge status={a.status} /></td>
+      <td className={styles.muted}>
+        {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
+      </td>
+    </tr>
+  )
+}
+
 function MappingsSection({ documents }) {
+  const { t } = useTranslation()
   const [mappings, setMappings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [rawDebug, setRawDebug] = useState(null)
 
   useEffect(() => {
     if (!documents.length) { setLoading(false); return }
@@ -671,120 +704,44 @@ function MappingsSection({ documents }) {
             const res = await fetch(`${BASE_URL}/mappings/document/${d.doc_id}`)
             if (!res.ok) return []
             const data = await res.json()
-
-            console.log(`Mappings for ${d.doc_id}:`, data)
-            setRawDebug(JSON.stringify(data, null, 2))
-
             if (Array.isArray(data)) return data
             if (data && Array.isArray(data.mappings)) return data.mappings
             if (data && Array.isArray(data.data)) return data.data
-            if (data && Array.isArray(data.results)) return data.results
-            if (data && typeof data === 'object' && !Array.isArray(data)) {
-              if (data.clause_id || data.mapped_policy) return [data]
-            }
             return []
           })
         )
-
-        const all = results.flatMap(r =>
-          r.status === 'fulfilled' ? r.value : []
-        )
-
-        console.log('All mappings combined:', all)
+        const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
         setMappings(all)
       } catch (err) {
-        console.error('Mappings fetch error:', err)
-        setError(`Failed to load mapping data: ${err.message}`)
+        setError(`${t('dashboard.failedToLoadMappingData')}: ${err.message}`)
       } finally {
         setLoading(false)
       }
     }
-
     fetchAll()
-  }, [documents])
+  }, [documents, t])
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
-
-  if (!mappings.length) {
-    return (
-      <div style={{ padding: '2rem' }}>
-        <div className={styles.empty}>
-          No mapping data found. Check console (F12) for raw API response.
-        </div>
-        {rawDebug && (
-          <div style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            background: '#f5f4f0',
-            border: '1px solid #e0dbd3',
-            borderRadius: '6px',
-            fontFamily: 'Courier New, monospace',
-            fontSize: '0.75rem',
-            color: '#1a3a5c',
-            whiteSpace: 'pre-wrap',
-            maxHeight: '300px',
-            overflowY: 'auto'
-          }}>
-            <p style={{ marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7a7a7a' }}>
-              Raw API Response (first document):
-            </p>
-            {rawDebug}
-          </div>
-        )}
-      </div>
-    )
-  }
+  if (!mappings.length) return <EmptyState message={t('dashboard.noMappingDataFound')} />
 
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Clause</th>
-            <th>Mapped Policy</th>
-            <th>Department</th>
-            <th>Gap</th>
-            <th>Confidence</th>
-            <th>Status</th>
-            <th>Reasoning</th>
+            <th>{t('dashboard.table.clause')}</th>
+            <th>{t('dashboard.table.mappedPolicy')}</th>
+            <th>{t('dashboard.table.department')}</th>
+            <th>{t('dashboard.table.gap')}</th>
+            <th>{t('dashboard.table.confidence')}</th>
+            <th>{t('dashboard.table.status')}</th>
+            <th>{t('dashboard.table.reasoning')}</th>
           </tr>
         </thead>
         <tbody>
           {mappings.map((m, i) => (
-            <tr key={m.clause_id || i} className={styles.tr}>
-              <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
-              <td className={styles.policyName}>{m.mapped_policy || '—'}</td>
-              <td className={styles.muted}>{m.department || '—'}</td>
-              <td>
-                <span className={styles.badge} style={
-                  m.gap_detected
-                    ? { background: '#fdecea', color: '#c0392b' }
-                    : { background: '#e8f5e9', color: '#256029' }
-                }>
-                  {m.gap_detected ? 'Gap Detected' : 'No Gap'}
-                </span>
-              </td>
-              <td>
-                <div className={styles.scoreWrap}>
-                  <div className={styles.scoreBar}>
-                    <div className={styles.scoreFill} style={{
-                      width: `${Math.round((m.mapping_confidence || 0) * 100)}%`,
-                      background: '#1a3a5c',
-                    }} />
-                  </div>
-                  <span className={styles.scoreNum}>
-                    {m.mapping_confidence != null
-                      ? parseFloat(m.mapping_confidence).toFixed(2)
-                      : '—'}
-                  </span>
-                </div>
-              </td>
-              <td><StatusBadge status={m.mapping_status || m.status || 'unknown'} /></td>
-              <td className={styles.muted} style={{ maxWidth: '200px', fontSize: '0.72rem' }}>
-                {m.reasoning || '—'}
-              </td>
-            </tr>
+            <MappingTableRow key={m.clause_id || i} m={m} />
           ))}
         </tbody>
       </table>
@@ -792,9 +749,51 @@ function MappingsSection({ documents }) {
   )
 }
 
-// ── Main Dashboard ───────────────────────────────────────
+function MappingTableRow({ m }) {
+  const { t } = useTranslation()
+  const translatedPolicy = useTranslate(m.mapped_policy, { dynamic: true })
+  const translatedDept = useTranslate(m.department, { dynamic: true })
+  const translatedReasoning = useTranslate(m.reasoning, { dynamic: true })
+  const gapKey = m.gap_detected ? 'gapDetected' : 'noGap'
+  const translatedGap = t(`common.${gapKey}`)
+
+  return (
+    <tr className={styles.tr}>
+      <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
+      <td className={styles.policyName}>{translatedPolicy || '—'}</td>
+      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td>
+        <span className={styles.badge} style={
+          m.gap_detected
+            ? { background: '#fdecea', color: '#c0392b' }
+            : { background: '#e8f5e9', color: '#256029' }
+        }>
+          {translatedGap}
+        </span>
+      </td>
+      <td>
+        <div className={styles.scoreWrap}>
+          <div className={styles.scoreBar}>
+            <div className={styles.scoreFill} style={{
+              width: `${Math.round((m.mapping_confidence || 0) * 100)}%`,
+              background: '#1a3a5c',
+            }} />
+          </div>
+          <span className={styles.scoreNum}>
+            {m.mapping_confidence != null ? parseFloat(m.mapping_confidence).toFixed(2) : '—'}
+          </span>
+        </div>
+      </td>
+      <td><StatusBadge status={m.mapping_status || m.status || 'unknown'} /></td>
+      <td className={styles.muted} style={{ maxWidth: '200px', fontSize: '0.72rem' }}>
+        {translatedReasoning || '—'}
+      </td>
+    </tr>
+  )
+}
 
 export default function Dashboard() {
+  const { t } = useTranslation()
   const [documents, setDocuments] = useState([])
   const [risks, setRisks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -802,36 +801,7 @@ export default function Dashboard() {
   const [lastRefresh, setLastRefresh] = useState(null)
   const [activeTab, setActiveTab] = useState('pipeline')
 
-//   const fetchData = useCallback(async () => {
-//     setLoading(true)
-//     setError(null)
-//     try {
-//       const docsRes = await fetch(`${BASE_URL}/documents`)
-//       if (!docsRes.ok) throw new Error(`Documents endpoint returned ${docsRes.status}`)
-//       const docs = await docsRes.json()
-//       const docList = Array.isArray(docs) ? docs : []
-//       setDocuments(docList)
-
-//       const riskResults = await Promise.allSettled(
-//         docList.map(d =>
-//           fetch(`${BASE_URL}/risk/${d.doc_id}`)
-//             .then(r => r.ok ? r.json() : null)
-//             .catch(() => null)
-//         )
-//       )
-//       const validRisks = riskResults
-//         .filter(r => r.status === 'fulfilled' && r.value)
-//         .map(r => r.value)
-//       setRisks(validRisks)
-
-//       setLastRefresh(new Date())
-//     } catch (err) {
-//       setError(`Could not connect to backend at ${BASE_URL}. Make sure your server is running.`)
-//     } finally {
-//       setLoading(false)
-//     }
-//   }, [])
-const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -841,7 +811,6 @@ const fetchData = useCallback(async () => {
       const docList = Array.isArray(docs) ? docs : []
       setDocuments(docList)
 
-      // Document-level risks
       const riskResults = await Promise.allSettled(
         docList.map(d =>
           fetch(`${BASE_URL}/risk/${d.doc_id}`)
@@ -853,7 +822,6 @@ const fetchData = useCallback(async () => {
         .filter(r => r.status === 'fulfilled' && r.value)
         .map(r => r.value)
 
-      // Clause-level risks
       const clauseRiskResults = await Promise.allSettled(
         docList.map(d =>
           fetch(`${BASE_URL}/risk/${d.doc_id}/clauses`)
@@ -865,27 +833,26 @@ const fetchData = useCallback(async () => {
       const clauseRisks = clauseRiskResults
         .flatMap(r => r.status === 'fulfilled' ? r.value : [])
 
-      setRisks([...docRisks, ...clauseRisks])  // ← both combined
-
+      setRisks([...docRisks, ...clauseRisks])
       setLastRefresh(new Date())
     } catch (err) {
-      setError(`Could not connect to backend at ${BASE_URL}. Make sure your server is running.`)
+      setError(`${t('dashboard.couldNotConnectToBackend')} ${BASE_URL}. ${t('dashboard.makeSureYourServerIsRunning')}`)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData,  600000)
+    const interval = setInterval(fetchData, 600000)
     return () => clearInterval(interval)
   }, [fetchData])
 
   const tabs = [
-    { id: 'pipeline', label: 'Pipeline Status' },
-    { id: 'risk',     label: 'Risk Analysis' },
-    { id: 'actions',  label: 'Actions' },
-    { id: 'mappings', label: 'Policy Mappings' },
+    { id: 'pipeline', label: 'pipelineStatus' },
+    { id: 'risk',     label: 'riskAnalysis' },
+    { id: 'actions',  label: 'actions' },
+    { id: 'mappings', label: 'policyMappings' },
   ]
 
   return (
@@ -893,21 +860,20 @@ const fetchData = useCallback(async () => {
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderInner}>
           <div>
-            <p className={styles.eyebrow}>Live System</p>
-            <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
+            <p className={styles.eyebrow}>{t('dashboard.liveSystem')}</p>
+            <h1 className={styles.pageTitle}>{t('dashboard.complianceDashboard')}</h1>
             <p className={styles.pageSubtitle}>
-              Real-time view of document processing, risk scoring, and action generation
-              across all three pipelines.
+              {t('dashboard.sub')}
             </p>
           </div>
           <div className={styles.headerRight}>
             {lastRefresh && (
               <p className={styles.refreshNote}>
-                Last updated: {lastRefresh.toLocaleTimeString()}
+                {t('dashboard.lastUpdated')}: {lastRefresh.toLocaleTimeString()}
               </p>
             )}
             <button className={styles.refreshBtn} onClick={fetchData} disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh'}
+              {loading ? t('dashboard.refreshing') : t('dashboard.refresh')}
             </button>
           </div>
         </div>
@@ -915,7 +881,7 @@ const fetchData = useCallback(async () => {
 
       <div className={styles.content}>
         <section className={styles.section}>
-          <SectionHeader eyebrow="System Overview" title="Platform Health" />
+          <SectionHeader i18nEyebrow="systemOverview" i18nTitle="platformHealth" />
           {loading
             ? <Loader />
             : error
@@ -925,17 +891,11 @@ const fetchData = useCallback(async () => {
         </section>
 
         <section className={styles.section}>
-          <SectionHeader eyebrow="Data Explorer" title="Pipeline Data" />
+          <SectionHeader i18nEyebrow="dataExplorer" i18nTitle="pipelineData" />
 
           <div className={styles.tabs}>
             {tabs.map(t => (
-              <button
-                key={t.id}
-                className={`${styles.tab} ${activeTab === t.id ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                {t.label}
-              </button>
+              <TabButton key={t.id} t={t} activeTab={activeTab} setActiveTab={setActiveTab} />
             ))}
           </div>
 
@@ -957,5 +917,18 @@ const fetchData = useCallback(async () => {
         </section>
       </div>
     </div>
+  )
+}
+
+function TabButton({ t: tab, activeTab, setActiveTab }) {
+  const { t } = useTranslation()
+  const translatedLabel = t(`dashboard.${tab.label}`)
+  return (
+    <button
+      className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
+      onClick={() => setActiveTab(tab.id)}
+    >
+      {translatedLabel}
+    </button>
   )
 }

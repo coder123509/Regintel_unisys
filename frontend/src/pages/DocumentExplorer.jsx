@@ -165,8 +165,56 @@ function KeywordItem({ k }) {
   return <span className={styles.keyword}>{translatedKeyword}</span>
 }
 
+import TranslationService from '../services/TranslationService'
+
+// ── Document detail sections ─────────────────────────────
+
 function ClausesTable({ clauses }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [translatedData, setTranslatedData] = useState({})
+  
+  useEffect(() => {
+    if (!clauses.length || i18n.language === 'en') return
+
+    const translateAll = async (items, lang) => {
+      const textsToTranslate = items.flatMap(c => [
+        c.text,
+        c.deadline
+      ]).filter(Boolean)
+
+      const uniqueTexts = [...new Set(textsToTranslate)]
+      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
+
+      const initialResults = {}
+      uniqueTexts.forEach(text => {
+        if (cachedData[`${lang}_${text}`]) {
+          initialResults[text] = cachedData[`${lang}_${text}`]
+        }
+      })
+      if (Object.keys(initialResults).length > 0) {
+        setTranslatedData(prev => ({ ...prev, ...initialResults }))
+      }
+
+      if (neededTexts.length === 0) return
+
+      const batchSize = 5
+      for (let i = 0; i < neededTexts.length; i += batchSize) {
+        const batch = neededTexts.slice(i, i + batchSize)
+        const results = await TranslationService.translateBatch(batch, lang)
+        setTranslatedData(prev => {
+          const next = { ...prev }
+          batch.forEach((original, idx) => {
+            next[original] = results[idx]
+          })
+          return next
+        })
+      }
+    }
+
+    translateAll(clauses, i18n.language)
+  }, [clauses, i18n.language])
+
   if (!clauses.length) return <EmptyState i18nKey="explorer.noClausesFound" message="No clauses found for this document." />
 
   const TYPE_COLOR = {
@@ -189,7 +237,13 @@ function ClausesTable({ clauses }) {
         </thead>
         <tbody>
           {clauses.map((c, i) => (
-            <ClauseTableRow key={c.clause_id || i} c={c} typeColor={TYPE_COLOR} />
+            <ClauseTableRow 
+              key={c.clause_id || i} 
+              c={c} 
+              typeColor={TYPE_COLOR} 
+              translations={translatedData}
+              lang={i18n.language}
+            />
           ))}
         </tbody>
       </table>
@@ -197,13 +251,19 @@ function ClausesTable({ clauses }) {
   )
 }
 
-function ClauseTableRow({ c, typeColor }) {
+function ClauseTableRow({ c, typeColor, translations, lang }) {
   const { t } = useTranslation()
   const tc = typeColor[c.type] || { bg: '#f0ede8', text: '#4a4a4a' }
   const translatedType = t(`explorer.types.${c.type}`, c.type)
-  const translatedText = useTranslate(c.text, { dynamic: true })
-  const translatedDeadline = useTranslate(c.deadline, { dynamic: true })
   
+  const getTranslated = (text) => {
+    if (!text || lang === 'en') return text
+    if (translations[text]) return translations[text]
+    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
+    return t('common.translating', 'Translating...')
+  }
+
   return (
     <tr className={styles.tr}>
       <td><code className={styles.code}>{c.clause_id}</code></td>
@@ -211,8 +271,8 @@ function ClauseTableRow({ c, typeColor }) {
         <Badge label={translatedType || '—'}
           style={{ background: tc.bg, color: tc.text }} />
       </td>
-      <td className={styles.clauseText}>{translatedText}</td>
-      <td className={styles.muted}>{translatedDeadline || '—'}</td>
+      <td className={styles.clauseText}>{getTranslated(c.text)}</td>
+      <td className={styles.muted}>{getTranslated(c.deadline) || '—'}</td>
       <td>
         <ScoreBar value={c.extraction_confidence}
           color={
@@ -227,7 +287,52 @@ function ClauseTableRow({ c, typeColor }) {
 }
 
 function MappingsTable({ mappings }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [translatedData, setTranslatedData] = useState({})
+
+  useEffect(() => {
+    if (!mappings.length || i18n.language === 'en') return
+
+    const translateAll = async (items, lang) => {
+      const textsToTranslate = items.flatMap(m => [
+        m.mapped_policy,
+        m.department,
+        m.reasoning
+      ]).filter(Boolean)
+
+      const uniqueTexts = [...new Set(textsToTranslate)]
+      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
+
+      const initialResults = {}
+      uniqueTexts.forEach(text => {
+        if (cachedData[`${lang}_${text}`]) {
+          initialResults[text] = cachedData[`${lang}_${text}`]
+        }
+      })
+      if (Object.keys(initialResults).length > 0) {
+        setTranslatedData(prev => ({ ...prev, ...initialResults }))
+      }
+
+      if (neededTexts.length === 0) return
+
+      const batchSize = 5
+      for (let i = 0; i < neededTexts.length; i += batchSize) {
+        const batch = neededTexts.slice(i, i + batchSize)
+        const results = await TranslationService.translateBatch(batch, lang)
+        setTranslatedData(prev => {
+          const next = { ...prev }
+          batch.forEach((original, idx) => {
+            next[original] = results[idx]
+          })
+          return next
+        })
+      }
+    }
+
+    translateAll(mappings, i18n.language)
+  }, [mappings, i18n.language])
+
   if (!mappings.length) return <EmptyState i18nKey="explorer.noMappingsFound" message="No policy mappings found. Run Pipeline 2 for this document." />
 
   return (
@@ -246,7 +351,12 @@ function MappingsTable({ mappings }) {
         </thead>
         <tbody>
           {mappings.map((m, i) => (
-            <MappingTableRow key={m.clause_id || i} m={m} />
+            <MappingTableRow 
+              key={m.clause_id || i} 
+              m={m} 
+              translations={translatedData}
+              lang={i18n.language}
+            />
           ))}
         </tbody>
       </table>
@@ -254,19 +364,25 @@ function MappingsTable({ mappings }) {
   )
 }
 
-function MappingTableRow({ m }) {
+function MappingTableRow({ m, translations, lang }) {
   const { t } = useTranslation()
-  const translatedPolicy = useTranslate(m.mapped_policy, { dynamic: true })
-  const translatedDept = useTranslate(m.department, { dynamic: true })
-  const translatedReasoning = useTranslate(m.reasoning, { dynamic: true })
+
+  const getTranslated = (text) => {
+    if (!text || lang === 'en') return text
+    if (translations[text]) return translations[text]
+    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
+    return t('common.translating', 'Translating...')
+  }
+
   const gapKey = m.gap_detected ? 'gapDetected' : 'noGap'
   const translatedGapLabel = t(`common.${gapKey}`)
 
   return (
     <tr className={styles.tr}>
       <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
-      <td className={styles.policyName}>{translatedPolicy || '—'}</td>
-      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td className={styles.policyName}>{getTranslated(m.mapped_policy) || '—'}</td>
+      <td className={styles.muted}>{getTranslated(m.department) || '—'}</td>
       <td>
         <Badge
           label={translatedGapLabel}
@@ -277,7 +393,7 @@ function MappingTableRow({ m }) {
       </td>
       <td><ScoreBar value={m.mapping_confidence} color="#1a3a5c" /></td>
       <td><StatusBadge status={m.mapping_status || m.status} /></td>
-      <td className={`${styles.muted} ${styles.reasoning}`}>{translatedReasoning || '—'}</td>
+      <td className={`${styles.muted} ${styles.reasoning}`}>{getTranslated(m.reasoning) || '—'}</td>
     </tr>
   )
 }
@@ -383,7 +499,52 @@ function RiskTableRow({ r, riskColor }) {
 }
 
 function ActionsTable({ actions }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [translatedData, setTranslatedData] = useState({})
+
+  useEffect(() => {
+    if (!actions.length || i18n.language === 'en') return
+
+    const translateAll = async (items, lang) => {
+      const textsToTranslate = items.flatMap(a => [
+        a.action_text,
+        a.action_type?.replace('_', ' '),
+        a.department
+      ]).filter(Boolean)
+
+      const uniqueTexts = [...new Set(textsToTranslate)]
+      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
+
+      const initialResults = {}
+      uniqueTexts.forEach(text => {
+        if (cachedData[`${lang}_${text}`]) {
+          initialResults[text] = cachedData[`${lang}_${text}`]
+        }
+      })
+      if (Object.keys(initialResults).length > 0) {
+        setTranslatedData(prev => ({ ...prev, ...initialResults }))
+      }
+
+      if (neededTexts.length === 0) return
+
+      const batchSize = 5
+      for (let i = 0; i < neededTexts.length; i += batchSize) {
+        const batch = neededTexts.slice(i, i + batchSize)
+        const results = await TranslationService.translateBatch(batch, lang)
+        setTranslatedData(prev => {
+          const next = { ...prev }
+          batch.forEach((original, idx) => {
+            next[original] = results[idx]
+          })
+          return next
+        })
+      }
+    }
+
+    translateAll(actions, i18n.language)
+  }, [actions, i18n.language])
+
   if (!actions.length)
     return <EmptyState i18nKey="explorer.noActionsGenerated" message="No actions generated yet. Run Pipeline 3 for this document." />
 
@@ -409,7 +570,13 @@ function ActionsTable({ actions }) {
         </thead>
         <tbody>
           {actions.map((a, i) => (
-            <ActionTableRow key={a.action_id || i} a={a} actionColor={ACTION_COLOR} />
+            <ActionTableRow 
+              key={a.action_id || i} 
+              a={a} 
+              actionColor={ACTION_COLOR} 
+              translations={translatedData}
+              lang={i18n.language}
+            />
           ))}
         </tbody>
       </table>
@@ -417,23 +584,28 @@ function ActionsTable({ actions }) {
   )
 }
 
-function ActionTableRow({ a, actionColor }) {
+function ActionTableRow({ a, actionColor, translations, lang }) {
   const { t } = useTranslation()
   const tc = actionColor[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
-  const translatedText = useTranslate(a.action_text, { dynamic: true })
-  const translatedType = useTranslate(a.action_type?.replace('_', ' '), { dynamic: true })
-  const translatedDept = useTranslate(a.department, { dynamic: true })
   
+  const getTranslated = (text) => {
+    if (!text || lang === 'en') return text
+    if (translations[text]) return translations[text]
+    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
+    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
+    return t('common.translating', 'Translating...')
+  }
+
   return (
     <tr className={styles.tr}>
-      <td className={styles.actionText}>{translatedText}</td>
+      <td className={styles.actionText}>{getTranslated(a.action_text)}</td>
       <td>
         <Badge
-          label={translatedType || '—'}
+          label={getTranslated(a.action_type?.replace('_', ' ')) || '—'}
           style={{ background: tc.bg, color: tc.text }}
         />
       </td>
-      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td className={styles.muted}>{getTranslated(a.department) || '—'}</td>
       <td><code className={styles.code}>{a.clause_id}</code></td>
       <td><StatusBadge status={a.status} /></td>
       <td className={styles.muted}>

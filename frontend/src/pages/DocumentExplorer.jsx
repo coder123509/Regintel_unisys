@@ -45,6 +45,7 @@ function PriorityBadge({ priority }) {
   )
 }
 
+// 
 function ScoreBar({ value, color }) {
   const pct = Math.round(parseFloat(value || 0) * 100)
   return (
@@ -300,8 +301,16 @@ function RiskPanel({ docRisk, clauseRisks }) {
   )
 }
 
+// ── REFACTORED ACTIONS TABLE WITH HOLISTIC APPROVAL-ONLY GATE ──
 function ActionsTable({ actions }) {
-  if (!actions.length)
+  const [localActions, setLocalActions] = useState(actions)
+  const [updatingId, setUpdatingId] = useState(null)
+
+  useEffect(() => {
+    setLocalActions(actions)
+  }, [actions])
+
+  if (!localActions.length)
     return <EmptyState message="No actions generated yet. Run Pipeline 3 for this document." />
 
   const ACTION_COLOR = {
@@ -311,22 +320,48 @@ function ActionsTable({ actions }) {
     checklist:     { bg: '#e8f5e9', text: '#256029' },
   }
 
+  const handleUpdateStatus = async (actionId, newStatus) => {
+    setUpdatingId(actionId)
+    try {
+      const res = await fetch(`${BASE_URL}/actions/${actionId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (res.ok) {
+        setLocalActions(prev =>
+          prev.map(a => (a.action_id === actionId ? { ...a, status: newStatus } : a))
+        )
+      } else {
+        alert('Failed to update action status on the serverless gateway.')
+      }
+    } catch (err) {
+      console.error('Error executing human decision over row entity:', err)
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Action</th>
+            <th>Action Item Recommendation</th>
             <th>Type</th>
             <th>Department</th>
-            <th>Clause</th>
-            <th>Status</th>
-            <th>Generated</th>
+            <th>Clause ID</th>
+            <th>Current Status</th>
+            <th>Governance Verification Gate</th>
           </tr>
         </thead>
         <tbody>
-          {actions.map((a, i) => {
+          {localActions.map((a, i) => {
             const tc = ACTION_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
+            const currentStatus = a.status?.toLowerCase() || 'pending'
+            const isPending = currentStatus === 'pending' || currentStatus === 'in_progress'
+
             return (
               <tr key={a.action_id || i} className={styles.tr}>
                 <td className={styles.actionText}>{a.action_text}</td>
@@ -338,9 +373,36 @@ function ActionsTable({ actions }) {
                 </td>
                 <td className={styles.muted}>{a.department || '—'}</td>
                 <td><code className={styles.code}>{a.clause_id}</code></td>
-                <td><StatusBadge status={a.status} /></td>
-                <td className={styles.muted}>
-                  {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
+                <td><StatusBadge status={currentStatus} /></td>
+                <td>
+                  {isPending ? (
+                    <button
+                      onClick={() => handleUpdateStatus(a.action_id, 'completed')}
+                      disabled={updatingId !== null}
+                      style={{
+                        background: '#e8f5e9',
+                        color: '#256029',
+                        border: '1px solid #27ae60',
+                        padding: '6px 14px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = '#d4edda' }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = '#e8f5e9' }}
+                    >
+                      ✓ Approve Action
+                    </button>
+                  ) : (
+                    <span style={{ color: '#27ae60', fontSize: '0.8rem', fontStyle: 'italic', fontWeight: '600' }}>
+                      ✓ Verified & Active
+                    </span>
+                  )}
                 </td>
               </tr>
             )

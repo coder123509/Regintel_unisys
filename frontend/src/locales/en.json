@@ -1,0 +1,419 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "features": "Features",
+    "architecture": "Architecture",
+    "pipelines": "Pipelines",
+    "team": "Team",
+    "documents": "Documents",
+    "dashboard": "Dashboard",
+    "backToHome": "Back to Home",
+    "agent": "Agent"
+  },
+  "hero": {
+    "autonomous": "Autonomous",
+    "regulatory": "Regulatory",
+    "updateToPolicy": "Update-to-Policy",
+    "translationAgent": "Translation Agent",
+    "sub": "A multi-agent AI system for real-time regulatory compliance orchestration. Transforming how enterprises detect, interpret, and respond to regulatory change.",
+    "viewArchitecture": "View Architecture",
+    "explorePipelines": "Explore Pipelines",
+    "extractionAccuracy": "Extraction Accuracy",
+    "projectedRoi": "Projected ROI",
+    "livePipeline": "RegIntel Agent — Live Pipeline",
+    "regulatorySource": "Regulatory Source",
+    "clauseExtraction": "Clause Extraction",
+    "knowledgeGraph": "Knowledge Graph",
+    "riskScoring": "Risk Scoring",
+    "actionOutput": "Action Output",
+    "clauseExtracted": "Clause Extracted",
+    "obligationConfidence": "Obligation · confidence",
+    "gapDetected": "Gap Detected",
+    "dataProtectionPolicy": "Data Protection Policy",
+    "riskScore": "Risk Score",
+    "priorityLevels": "Priority: Low, Medium, High",
+    "actionGenerated": "Action Generated",
+    "draftPolicyUpdate": "Draft policy update sent"
+  },
+  "about": {
+    "projectOverview": "Project Overview",
+    "heading": "Bridging the Gap Between Regulatory Change and Organisational Response",
+    "body1": "The accelerating pace and growing complexity of global regulatory frameworks across banking, aviation, data privacy, and digital governance have outpaced traditional manual compliance processes. Enterprises continue to rely on labour-intensive interpretation of regulatory circulars and legal amendments, resulting in delayed policy updates, fragmented implementation, and increased audit exposure.",
+    "body2": "RegIntel Agent is a software-based, multi-agent AI system designed to transform compliance from a reactive workflow into a proactive, autonomous decision-making process. The system continuously ingests regulatory updates from official sources, applies large language models to extract structured obligations, and leverages a compliance knowledge graph to map clauses to enterprise policies, procedures, and IT controls.",
+    "keywords": {
+      "agenticAi": "Agentic AI",
+      "multiAgentSystems": "Multi-Agent Systems",
+      "knowledgeGraphs": "Knowledge Graphs",
+      "policyTranslation": "Policy Translation",
+      "riskScoring": "Risk Scoring",
+      "nlpLlm": "NLP / LLM"
+    },
+    "velocity": "Velocity & Volume",
+    "velocityDesc": "Continuous real-time scanning of regulatory sources, detecting changes within hours of publication.",
+    "interpretation": "Interpretation",
+    "interpretationDesc": "LLM-based extraction of obligations, prohibitions, permissions, and deadlines with 90%+ precision.",
+    "mapping": "Policy Mapping",
+    "mappingDesc": "Dynamic knowledge graph linking clauses to internal policies, controls, and responsible departments.",
+    "generation": "Action Generation",
+    "generationDesc": "Automated draft policy revisions, compliance checklists, and risk-ranked remediation tasks."
+  },
+  "features": {
+    "coreCapabilities": "Core Capabilities",
+    "heading": "Six Integrated Modules, One Autonomous Platform",
+    "sub": "Each module addresses a distinct dimension of the compliance challenge, working together as a closed-loop intelligence system.",
+    "monitoring": "Monitoring",
+    "extraction": "Extraction",
+    "graphDb": "Graph DB",
+    "rag": "RAG",
+    "riskEngine": "Risk Engine",
+    "actions": "Actions",
+    "items": {
+      "monitoring": {
+        "title": "Continuous Regulatory Monitoring",
+        "body": "Web crawlers and RSS/API feed parsers continuously scan government portals, financial regulators, and official legal bulletins. Change-detection algorithms flag new or amended publications and route them to the extraction pipeline within hours."
+      },
+      "extraction": {
+        "title": "LLM-Based Clause Extraction",
+        "body": "Documents are pre-processed through tokenisation and section segmentation, then passed to a fine-tuned GPT-4 class or Legal-BERT model that identifies and classifies obligations, prohibitions, permissions, deadlines, and conditional requirements at 90%+ precision."
+      },
+      "graphDb": {
+        "title": "Knowledge Graph Construction",
+        "body": "Extracted clauses are represented as structured nodes within a Neo4j graph database. Edges encode relationships between regulatory clauses, internal policy documents, process controls, responsible departments, and affected IT systems."
+      },
+      "rag": {
+        "title": "RAG-Augmented Policy Mapping",
+        "body": "A Retrieval-Augmented Generation layer allows the LLM to query the knowledge graph during gap analysis, combining graph traversal and semantic vector search to identify policy coverage gaps and map obligations to responsible owners."
+      },
+      "riskEngine": {
+        "title": "Multi-Criteria Risk Scoring",
+        "body": "Each regulatory clause is scored across severity of non-compliance, breadth of organisational impact, deadline proximity, and enforcement likelihood. SHAP-based explanations surface the scoring rationale to compliance officers for transparency."
+      },
+      "actions": {
+        "title": "Automated Action Generation",
+        "body": "High-priority clauses trigger the generation of first-draft compliance artefacts: policy revisions, control adjustments, and audit checklists. Every artefact includes a full traceability chain linking it back to the originating regulatory clause."
+      }
+    }
+  },
+  "architecture": {
+    "systemDesign": "System Design",
+    "systemArchitecture": "System Architecture",
+    "sub": "Five orchestrated modules form a closed-loop compliance intelligence pipeline, from regulatory publication to executable policy update.",
+    "detectionTarget": "Detection Target",
+    "graphDatabase": "Graph Database",
+    "messageQueue": "Message Queue",
+    "deployment": "Deployment",
+    "security": "Security",
+    "auditLogs": "Audit Logs",
+    "modules": {
+      "monitoring": {
+        "label": "Regulatory Monitoring",
+        "sub": "Web Crawlers, RSS Parsers, Change Detection, Kafka Queue"
+      },
+      "extraction": {
+        "label": "Clause Extraction",
+        "sub": "Tokenisation, Fine-Tuned LLM (GPT-4 / Legal-BERT), Confidence Threshold"
+      },
+      "knowledgeGraph": {
+        "label": "Knowledge Graph",
+        "sub": "Neo4j, Policy Inventory, Enterprise IT Controls, RAG Layer"
+      },
+      "riskEngine": {
+        "label": "Risk Scoring Engine",
+        "sub": "Multi-Criteria Model, SHAP Explainability, Prioritised Risk Vector"
+      },
+      "actions": {
+        "label": "Action Generation",
+        "sub": "LLM + RAG, RBAC Approval Gate, Policy Drafts, Audit Trail"
+      }
+    },
+    "specs": {
+      "detectionTime": "2 – 4 hours post-publication",
+      "neo4j": "Neo4j with horizontal clustering",
+      "kafka": "Apache Kafka (async ingestion)",
+      "cloudNative": "Cloud-native, AWS / Azure"
+    }
+  },
+  "pipelines": {
+    "dataFlow": "Data Flow",
+    "threePipelineArchitecture": "Three-Pipeline Architecture",
+    "sub": "Each pipeline has a distinct responsibility and exposes a clean API boundary, enabling modular development and independent scaling.",
+    "processFlow": "Process Flow",
+    "apiEndpoints": "API Endpoints",
+    "ingestion": "Ingestion",
+    "ragMapping": "RAG & Mapping",
+    "riskActions": "Risk & Actions",
+    "details": {
+      "p1": {
+        "title": "Pipeline 1 — Ingestion",
+        "desc": "Automated ingestion system that continuously monitors regulatory sources, fetches newly published documents, deduplicates them, extracts structured clauses using LLM, generates base context, and stores the processed document in a structured format.",
+        "steps": [
+          "Scheduler (cron / background worker)",
+          "Fetch new documents via RSS, API, or scraping",
+          "Deduplicate using SHA-256 hash",
+          "Text cleaning — remove HTML, headers, whitespace",
+          "Clause extraction via LLM",
+          "Base context generation (summary + keywords)",
+          "Store structured document in MongoDB / PostgreSQL",
+          "Emit doc_id to downstream pipelines"
+        ],
+        "endpoints": [
+          { "desc": "List all processed documents" },
+          { "desc": "Full document with clauses and context" },
+          { "desc": "Extracted structured clauses only" },
+          { "desc": "Summary and keyword metadata" }
+        ]
+      },
+      "p2": {
+        "title": "Pipeline 2 — RAG, Mapping & LLM Engine",
+        "desc": "Receives enriched documents from Pipeline 1 and applies a parallelised hybrid retrieval strategy combining graph traversal (Neo4j) and semantic vector search to map each clause to internal policies and detect compliance gaps.",
+        "steps": [
+          "Receive doc_id from Pipeline 1",
+          "For each clause: trigger hybrid retrieval",
+          "Graph Retrieval: Clause → Control → Policy → Department",
+          "Semantic Retrieval: vector embedding similarity search",
+          "Context Builder merges and deduplicates candidates",
+          "LLM selects best-matching policy and detects gaps",
+          "Assign responsible department by policy ownership",
+          "Store mapping results, return enriched clauses"
+        ],
+        "endpoints": [
+          { "desc": "Full document with all clauses enriched with mapping data" },
+          { "desc": "Deep-dive for a single clause including retrieval sources" }
+        ]
+      },
+      "p3": {
+        "title": "Pipeline 3 — Risk Scoring & Action Generation",
+        "desc": "Evaluates mapped clauses from Pipeline 2, calculates weighted risk scores, assigns priority levels (Low / Medium / High), and generates actionable compliance recommendations using LLM grounded in the knowledge graph.",
+        "steps": [
+          "Receive mapped clauses from Pipeline 2",
+          "Calculate severity score for each clause",
+          "Calculate impact across systems and operations",
+          "Calculate urgency based on deadline proximity",
+          "Aggregate: risk = 0.4×severity + 0.3×impact + 0.3×urgency",
+          "Classify priority: Low (0–0.3), Medium (0.3–0.7), High (0.7–1)",
+          "LLM generates policy updates, alerts, checklists",
+          "Store results, expose via dashboard API"
+        ],
+        "endpoints": [
+          { "desc": "Compute risk score and priority for a document" },
+          { "desc": "Generate actionable recommendations" },
+          { "desc": "Executive dashboard summary" }
+        ]
+      }
+    }
+  },
+  "team": {
+    "thePeople": "The People",
+    "projectTeam": "Project Team",
+    "sub": "Third-year undergraduate students from RV College of Engineering, Bengaluru, developing the RegIntel Agent for the Unisys Innovation Program 2026.",
+    "projectMentor": "Project Mentor",
+    "associateProfessor": "Associate Professor",
+    "industryMentor": "Industry Mentor"
+  },
+  "footer": {
+    "tagline": "Autonomous Regulatory Compliance Intelligence",
+    "desc": "A multi-agent AI system developed at RV College of Engineering, Bengaluru, for the Unisys Innovation Program 2026.",
+    "copy": "RegIntel Agent — RV College of Engineering, Bengaluru. Developed for the Unisys Innovation Program.",
+    "project": "Project",
+    "references": "References",
+    "technology": "Technology",
+    "links": {
+      "rbi": "RBI Regulations",
+      "gdpr": "GDPR",
+      "euAiAct": "EU AI Act",
+      "fda": "FDA AI Plan",
+      "neo4j": "Neo4j Graph DB",
+      "kafka": "Apache Kafka",
+      "gpt4": "GPT-4 / Legal-BERT",
+      "rag": "RAG Pipeline"
+    }
+  },
+  "dashboard": {
+    "liveSystem": "Live System",
+    "complianceDashboard": "Compliance Dashboard",
+    "sub": "Real-time view of document processing, risk scoring, and action generation across all three pipelines.",
+    "lastUpdated": "Last updated",
+    "refreshing": "Refreshing...",
+    "refresh": "Refresh",
+    "platformHealth": "Platform Health",
+    "systemOverview": "System Overview",
+    "pipelineData": "Pipeline Data",
+    "dataExplorer": "Data Explorer",
+    "pipelineStatus": "Pipeline Status",
+    "riskAnalysis": "Risk Analysis",
+    "actions": "Actions",
+    "policyMappings": "Policy Mappings",
+    "totalDocuments": "Total Documents",
+    "clausesExtracted": "Clauses Extracted",
+    "processingSuccess": "Processing Success",
+    "highRiskItems": "High Risk Items",
+    "lastPipelineRun": "Last Pipeline Run",
+    "allTime": "All time",
+    "acrossAllDocuments": "Across all documents",
+    "requireAttention": "Require attention",
+    "timeOfLastRefresh": "Time of last refresh",
+    "overallProgress": "Overall Progress",
+    "complete": "complete",
+    "selectDocument": "Select Document",
+    "checking": "Checking...",
+    "retry": "Retry",
+    "riskDistribution": "Risk Distribution",
+    "entries": "entries",
+    "documentLevel": "document-level",
+    "clauseLevel": "clause-level",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "failedToLoadRiskData": "Failed to load risk data.",
+    "noRiskDataAvailableYet": "No risk data available yet.",
+    "failedToLoadActions": "Failed to load actions.",
+    "noActionsGeneratedYet": "No actions generated yet.",
+    "failedToLoadMappingData": "Failed to load mapping data",
+    "noMappingDataFound": "No mapping data found.",
+    "couldNotConnectToBackend": "Could not connect to backend at",
+    "makeSureYourServerIsRunning": "Make sure your server is running.",
+    "selectADocumentToViewPipelineStatus": "Select a document to view pipeline status.",
+    "noDocumentsFound": "No documents found.",
+    "pipelines": {
+      "p1": {
+        "label": "Pipeline 1",
+        "sub": "Ingestion & Clause Extraction",
+        "steps": [
+          "Fetch document",
+          "Deduplicate",
+          "Clean text",
+          "Extract clauses",
+          "Store & emit"
+        ]
+      },
+      "p2": {
+        "label": "Pipeline 2",
+        "sub": "RAG, Mapping & LLM Engine",
+        "steps": [
+          "Hybrid retrieval",
+          "Graph traversal",
+          "Semantic search",
+          "LLM mapping",
+          "Gap detection"
+        ]
+      },
+      "p3": {
+        "label": "Pipeline 3",
+        "sub": "Risk Scoring & Action Generation",
+        "steps": [
+          "Score severity",
+          "Score impact",
+          "Score urgency",
+          "Classify priority",
+          "Generate actions"
+        ]
+      }
+    },
+    "table": {
+      "level": "Level",
+      "document": "Document",
+      "clause": "Clause",
+      "riskScore": "Risk Score",
+      "severity": "Severity",
+      "impact": "Impact",
+      "urgency": "Urgency",
+      "priority": "Priority",
+      "scoredAt": "Scored At",
+      "action": "Action",
+      "type": "Type",
+      "department": "Department",
+      "status": "Status",
+      "generated": "Generated",
+      "mappedPolicy": "Mapped Policy",
+      "gap": "Gap",
+      "confidence": "Confidence",
+      "reasoning": "Reasoning"
+    }
+  },
+  "explorer": {
+    "documentExplorer": "Document Explorer",
+    "allDocuments": "All Documents",
+    "sub": "Select a document from the list to view all associated clauses, policy mappings, risk scores, and generated actions.",
+    "searchDocuments": "Search documents...",
+    "total": "total",
+    "loading": "Loading...",
+    "documentMetadata": "Document Metadata",
+    "extractedClauses": "Extracted Clauses",
+    "policyMappings": "Policy Mappings",
+    "riskAnalysis": "Risk Analysis",
+    "generatedActions": "Generated Actions",
+    "fullDocumentText": "Full Document Text",
+    "overview": "Overview",
+    "showLess": "Show less",
+    "showFullText": "Show full text ({{count}} characters)",
+    "noDocumentText": "No document text available.",
+    "documentId": "Document ID",
+    "sourceId": "Source ID",
+    "sourceUrl": "Source URL",
+    "status": "Status",
+    "published": "Published",
+    "ingested": "Ingested",
+    "hash": "Hash",
+    "documentSummary": "Document Summary",
+    "overallRiskScore": "Overall Risk Score",
+    "scored": "Scored",
+    "documentLevelRisk": "Document-Level Risk",
+    "noClausesFound": "No clauses found for this document.",
+    "noMappingsFound": "No policy mappings found. Run Pipeline 2 for this document.",
+    "noRiskDataFound": "No risk data found. Run Pipeline 3 for this document.",
+    "noActionsGenerated": "No actions generated yet. Run Pipeline 3 for this document.",
+    "clauseId": "Clause ID",
+    "type": "Type",
+    "text": "Text",
+    "deadline": "Deadline",
+    "confidence": "Confidence",
+    "noSource": "No source",
+    "noSourceId": "No source ID",
+    "selectDocumentPrompt": "Select a document from the list to view its details.",
+    "tabs": {
+      "overview": "Overview",
+      "clauses": "Clauses",
+      "mappings": "Policy Mappings",
+      "risk": "Risk Analysis",
+      "actions": "Actions",
+      "fulltext": "Full Text"
+    },
+    "quickStats": {
+      "clauses": "Clauses",
+      "mappings": "Mappings",
+      "actions": "Actions",
+      "clauseRisks": "Clause Risks",
+      "overallRisk": "Overall Risk",
+      "priority": "Priority"
+    },
+    "types": {
+      "obligation": "Obligation",
+      "prohibition": "Prohibition",
+      "permission": "Permission"
+    }
+  },
+  "status": {
+    "processed": "Processed",
+    "ingesting": "Ingesting",
+    "failed": "Failed",
+    "duplicate": "Duplicate",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "done": "Done",
+    "completed": "Completed",
+    "notStarted": "Not Started"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "common": {
+    "gapDetected": "Gap Detected",
+    "noGap": "No Gap",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "translating": "Translating..."
+  }
+}

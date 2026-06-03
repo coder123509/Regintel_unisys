@@ -34,6 +34,7 @@ Each object must have:
 - "action_text": clear, specific action to take (1-2 sentences)
 - "action_type": one of "policy_update", "alert", "audit", "checklist"
 - "department": the department responsible
+- "rationale": short explanation of why this action is recommended
 
 GAP CLAUSES:
 {gap_clauses_json}
@@ -46,7 +47,7 @@ def generate_actions(clauses: list[dict]) -> list[dict]:
     """
     Takes a list of merged clause dicts (mapping + raw clause data).
     Returns a list of action dicts ready for DB insert:
-      clause_id, action_text, action_type, department
+      clause_id, action_text, action_type, department, rationale
 
     Falls back to rule-based actions if Gemini fails.
     """
@@ -95,6 +96,7 @@ def generate_actions(clauses: list[dict]) -> list[dict]:
                 "action_text": a.get("action_text", "Review and remediate gap."),
                 "action_type": action_type,
                 "department":  a.get("department", "Compliance"),
+                "rationale":   a.get("rationale", "This action was generated for a detected compliance gap."),
             })
         return validated
 
@@ -113,5 +115,6 @@ def _fallback_actions(gap_clauses: list[dict]) -> list[dict]:
                            f"to address gap: {c.get('reasoning', 'compliance gap detected')}",
             "action_type": "policy_update",
             "department":  c.get("department", "Compliance"),
+            "rationale":   f"The clause is marked as a gap and is mapped to {c.get('mapped_policy', 'a relevant policy')}.",
         })
     return actions

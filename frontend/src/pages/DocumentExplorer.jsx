@@ -5,6 +5,7 @@ import Translate from '../components/Translate'
 import useTranslate from '../hooks/useTranslate'
 
 const BASE_URL = 'http://localhost:5000/db'
+const PIPELINE3_URL = 'http://localhost:8003'
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -656,7 +657,7 @@ function DocumentDetail({ doc, onBack }) {
     const fetchAll = async () => {
       setLoading(true)
       try {
-        const [fullDoc, context, clauses, mappings, docRisk, clauseRisks, actions] =
+        const [fullDoc, context, clauses, mappings, docRisk, clauseRisks, actions, explainability] =
           await Promise.allSettled([
             fetch(`${BASE_URL}/documents/${doc.doc_id}`).then(r => r.ok ? r.json() : null),
             fetch(`${BASE_URL}/documents/${doc.doc_id}/context`).then(r => r.ok ? r.json() : null),
@@ -665,6 +666,7 @@ function DocumentDetail({ doc, onBack }) {
             fetch(`${BASE_URL}/risk/${doc.doc_id}`).then(r => r.ok ? r.json() : null),
             fetch(`${BASE_URL}/risk/${doc.doc_id}/clauses`).then(r => r.ok ? r.json() : []),
             fetch(`${BASE_URL}/actions/${doc.doc_id}`).then(r => r.ok ? r.json() : []),
+            fetch(`${PIPELINE3_URL}/risk/explain/${doc.doc_id}`).then(r => r.ok ? r.json() : null),
           ])
 
         const safeArr = r => {
@@ -683,6 +685,7 @@ function DocumentDetail({ doc, onBack }) {
           docRisk:      docRisk.status === 'fulfilled' ? docRisk.value : null,
           clauseRisks:  safeArr(clauseRisks),
           actions:      safeArr(actions),
+          explainability: explainability.status === 'fulfilled' ? explainability.value : null,
         })
       } finally {
         setLoading(false)
@@ -766,6 +769,11 @@ function DocumentDetail({ doc, onBack }) {
             {activeTab === 'risk' && (
               <SectionBlock i18nTitle="explorer.riskAnalysis">
                 <RiskPanel docRisk={data.docRisk} clauseRisks={data.clauseRisks} />
+              </SectionBlock>
+            )}
+            {activeTab === 'explainability' && (
+              <SectionBlock title="Explainability" count={data.explainability?.summary?.clause_explanations?.length || 0}>
+                <ExplainabilityPanel explainability={data.explainability} />
               </SectionBlock>
             )}
             {activeTab === 'actions' && (
@@ -895,19 +903,25 @@ export default function DocumentExplorer() {
     setError(null)
     try {
       const res = await fetch(`${BASE_URL}/documents`)
-      if (!res.ok) throw new Error(`Status ${res.status}`)
+      if (!res.ok) {
+        setError(`Could not reach backend at ${BASE_URL}. Make sure the server is running.`)
+        return
+      }
       const data = await res.json()
       const list = Array.isArray(data) ? data : []
       setDocuments(list)
       if (list.length && !selected) setSelected(list[0])
-    } catch (err) {
+    } catch {
       setError(`Could not reach backend at ${BASE_URL}. Make sure the server is running.`)
     } finally {
       setLoading(false)
     }
   }, [selected])
 
-  useEffect(() => { fetchDocuments() }, [fetchDocuments])
+  useEffect(() => {
+    const timer = setTimeout(() => fetchDocuments(), 0)
+    return () => clearTimeout(timer)
+  }, [fetchDocuments])
 
   return (
     <div className={styles.page}>

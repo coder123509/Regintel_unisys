@@ -9,6 +9,8 @@ const groq = new OpenAI({
 
 const MAX_CHUNKS_CHAR = 300;
 const MAX_CONCURRENT_REQUESTS = 1; // Strict 1 concurrent request
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+const MAX_RETRIES = 5;
 
 class TranslationService {
   constructor() {
@@ -25,7 +27,6 @@ class TranslationService {
 
     const cacheKey = `${targetLanguage}_${text}`;
     if (this.cache[cacheKey]) {
-      console.log(`[i18n] Cache HIT: "${text.substring(0, 20)}..."`);
       return this.cache[cacheKey];
     }
 
@@ -37,27 +38,80 @@ class TranslationService {
     this.pendingRequests.set(cacheKey, translationPromise);
     
     try {
-      const result = await translationPromise;
-      return result;
+      return await translationPromise;
     } finally {
       this.pendingRequests.delete(cacheKey);
     }
   }
 
+  async translateBatch(texts, targetLanguage) {
+    if (!texts.length || targetLanguage === "en" || targetLanguage === "English") {
+      return texts;
+    }
+
+    // Filter out cached items and keep track of indices
+    const results = new Array(texts.length).fill(null);
+    const toTranslate = [];
+
+    texts.forEach((text, index) => {
+      const cacheKey = `${targetLanguage}_${text}`;
+      if (this.cache[cacheKey]) {
+        results[index] = this.cache[cacheKey];
+      } else {
+        toTranslate.push({ text, index });
+      }
+    });
+
+    if (toTranslate.length === 0) return results;
+
+    console.log(`[i18n] Batch translating ${toTranslate.length} items...`);
+
+    // Group items into small batches to stay under TPM/token limits
+    // Max 5 items or 1000 chars per batch
+    const batchSize = 5;
+    const batches = [];
+    for (let i = 0; i < toTranslate.length; i += batchSize) {
+      batches.push(toTranslate.slice(i, i + batchSize));
+    }
+
+    for (const batch of batches) {
+      const batchTexts = batch.map(item => item.text);
+      
+      const translatedBatch = await new Promise((resolve) => {
+        this.queue.push({
+          task: () => this._performBatchTranslation(batchTexts, targetLanguage),
+          resolve
+        });
+        this._processQueue();
+      });
+
+      if (translatedBatch && Array.isArray(translatedBatch)) {
+        batch.forEach((item, i) => {
+          const translated = translatedBatch[i] || item.text;
+          results[item.index] = translated;
+          // Note: Cache is already updated inside _performBatchTranslation for individual items
+        });
+      } else {
+        // Fallback for failed batch
+        batch.forEach(item => {
+          results[item.index] = results[item.index] || item.text;
+        });
+      }
+    }
+
+    return results;
+  }
+
   async _processTranslationRequest(text, targetLanguage, cacheKey) {
-    // 1. Chunking if necessary
     if (text.length > MAX_CHUNKS_CHAR) {
-      console.log(`[i18n] Splitting large text (${text.length} chars) into chunks...`);
       return await this._translateInChunks(text, targetLanguage, cacheKey);
     }
 
-    // 2. Queue for concurrency control
     return new Promise((resolve) => {
       this.queue.push({
         task: () => this._performTranslation(text, targetLanguage, cacheKey),
         resolve
       });
-      console.log(`[i18n] Queue length: ${this.queue.length}`);
       this._processQueue();
     });
   }
@@ -68,7 +122,6 @@ class TranslationService {
       chunks.push(text.slice(i, i + MAX_CHUNKS_CHAR));
     }
 
-    // Process chunks sequentially to minimize TPM impact
     const translatedChunks = [];
     for (const chunk of chunks) {
       translatedChunks.push(await this.translate(chunk, targetLanguage));
@@ -93,76 +146,114 @@ class TranslationService {
       resolve(result);
     } catch (error) {
       console.error("[i18n] Queue task failed:", error);
-      resolve(null); // Resolve with null on failure
+      resolve(null);
     } finally {
       this.activeRequests--;
-      // Small delay between requests to help with rate limits
-      setTimeout(() => this._processQueue(), 200);
+      // Small random jitter to prevent synchronized retry thundering herd
+      const jitter = Math.floor(Math.random() * 200);
+      setTimeout(() => this._processQueue(), 500 + jitter);
     }
   }
 
-  async _performTranslation(text, targetLanguage, cacheKey) {
-    console.log(`[i18n] Cache MISS: "${text.substring(0, 20)}..." (${text.length} chars)`);
-    
+  async _performTranslation(text, targetLanguage, cacheKey, retryCount = 0) {
     try {
-      const langMap = {
-        'hi': 'Hindi',
-        'kn': 'Kannada',
-        'ta': 'Tamil',
-        'te': 'Telugu'
-      };
-      const langName = langMap[targetLanguage] || targetLanguage;
-
-      console.log(`[i18n] Requesting Groq: ${text.length} chars -> ${langName}`);
-
+      const langName = this._getLangName(targetLanguage);
       const response = await groq.chat.completions.create({
         model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
-            content: `Translate the following English text to ${langName}. 
-            Return ONLY the translated text. No quotes, no explanations.
-            Keep technical terms (Neo4j, RAG, LLM, API, etc.), URLs, IDs, and file names UNCHANGED.`
+            content: `Translate to ${langName}. Return ONLY translation. Keep technical terms, IDs, URLs UNCHANGED.`
           },
-          {
-            role: "user",
-            content: text
-          }
+          { role: "user", content: text }
         ],
         temperature: 0.1,
       });
 
-      const translatedText = response.choices[0]?.message?.content?.trim() || text;
-      
-      // Log approximate tokens (chars / 4 is a common rough estimate)
-      console.log(`[i18n] Groq Success: ~${Math.ceil(text.length / 4)} tokens sent`);
-
-      this.cache[cacheKey] = translatedText;
+      const translated = response.choices[0]?.message?.content?.trim() || text;
+      this.cache[cacheKey] = translated;
       this._persistCache();
-
-      return translatedText;
+      return translated;
     } catch (error) {
-      if (error?.status === 429) {
-        console.error("[i18n] Rate limit (429) reached. Returning original text.");
-      } else {
-        console.error("[i18n] Groq Error:", error);
-      }
-      return text; // Fallback to original text
+      return await this._handleError(error, () => this._performTranslation(text, targetLanguage, cacheKey, retryCount + 1), retryCount, text);
     }
   }
 
-  _persistCache() {
-    const keys = Object.keys(this.cache);
-    if (keys.length > 3000) { // Increased cache capacity
-      const keysToRemove = keys.slice(0, 500);
-      keysToRemove.forEach(k => delete this.cache[k]);
+  async _performBatchTranslation(texts, targetLanguage, retryCount = 0) {
+    try {
+      const langName = this._getLangName(targetLanguage);
+      const prompt = texts.map((t, i) => `[${i}] ${t}`).join("\n");
+      
+      const response = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "system",
+            content: `Translate each line to ${langName}. Maintain the [index] prefix. Return ONLY the translated lines.`
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.1,
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      const lines = content.split("\n");
+      const translated = new Array(texts.length).fill(null);
+      
+      lines.forEach(line => {
+        const match = line.match(/^\[(\d+)\]\s*(.*)/);
+        if (match) {
+          const index = parseInt(match[1]);
+          if (index < texts.length) {
+            const translatedText = match[2].trim();
+            translated[index] = translatedText;
+            // Cache individual items from the batch
+            const originalText = texts[index];
+            this.cache[`${targetLanguage}_${originalText}`] = translatedText;
+          }
+        }
+      });
+
+      // For any that failed to parse, use original text as fallback
+      texts.forEach((original, i) => {
+        if (!translated[i]) translated[i] = original;
+      });
+
+      this._persistCache();
+      return translated;
+    } catch (error) {
+      return await this._handleError(error, () => this._performBatchTranslation(texts, targetLanguage, retryCount + 1), retryCount, texts);
     }
+  }
+
+  async _handleError(error, retryFn, retryCount, fallbackValue) {
+    if (error?.status === 429 && retryCount < MAX_RETRIES) {
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.warn(`[i18n] 429 Rate Limit. Retrying in ${delay}ms (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+      await new Promise(r => setTimeout(r, delay));
+      return retryFn();
+    }
+    console.error("[i18n] Error:", error);
+    return fallbackValue;
+  }
+
+  _getLangName(code) {
+    const map = { hi: 'Hindi', kn: 'Kannada', ta: 'Tamil', te: 'Telugu' };
+    return map[code] || code;
+  }
+
+  _persistCache() {
     try {
       localStorage.setItem("dynamic_translation_cache", JSON.stringify(this.cache));
     } catch (e) {
-      console.warn("[i18n] Local storage full, clearing cache");
-      this.cache = {};
-      localStorage.removeItem("dynamic_translation_cache");
+      console.warn("[i18n] Local storage full, clearing old items");
+      const keys = Object.keys(this.cache);
+      if (keys.length > 1000) {
+        const newCache = {};
+        keys.slice(-500).forEach(k => newCache[k] = this.cache[k]);
+        this.cache = newCache;
+        localStorage.setItem("dynamic_translation_cache", JSON.stringify(this.cache));
+      }
     }
   }
 }

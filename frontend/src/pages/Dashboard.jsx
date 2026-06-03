@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import styles from './Dashboard.module.css'
 import Translate from '../components/Translate'
 import useTranslate from '../hooks/useTranslate'
+import TranslationService from '../services/TranslationService'
 
 // ── CONFIG: point this at your backend ──────────────────
 const BASE_URL = 'http://localhost:5000/db'
@@ -607,11 +608,14 @@ function RiskTableRow({ r }) {
   )
 }
 
+
+
 function ActionsSection({ documents }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [actions, setActions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [translatedData, setTranslatedData] = useState({})
 
   useEffect(() => {
     if (!documents.length) { setLoading(false); return }
@@ -627,14 +631,62 @@ function ActionsSection({ documents }) {
         )
         const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
         setActions(all)
+        setLoading(false)
+
+        // Start batch translation for dynamic fields
+        if (i18n.language !== 'en') {
+          translateAll(all, i18n.language)
+        }
       } catch {
         setError(t('dashboard.failedToLoadActions'))
-      } finally {
         setLoading(false)
       }
     }
+
+    const translateAll = async (items, lang) => {
+      const textsToTranslate = items.flatMap(a => [
+        a.action_text,
+        a.action_type?.replace('_', ' '),
+        a.department
+      ]).filter(Boolean);
+
+      const uniqueTexts = [...new Set(textsToTranslate)];
+      
+      // Filter out what's already in the local cache to avoid redundant calls
+      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}");
+      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`]);
+
+      // Immediately set cached values to state
+      const initialResults = {};
+      uniqueTexts.forEach(text => {
+        if (cachedData[`${lang}_${text}`]) {
+          initialResults[text] = cachedData[`${lang}_${text}`];
+        }
+      });
+      if (Object.keys(initialResults).length > 0) {
+        setTranslatedData(prev => ({ ...prev, ...initialResults }));
+      }
+
+      if (neededTexts.length === 0) return;
+      
+      // Translate in smaller batches of 5 for progressive updates
+      const batchSize = 5;
+      for (let i = 0; i < neededTexts.length; i += batchSize) {
+        const batch = neededTexts.slice(i, i + batchSize);
+        const results = await TranslationService.translateBatch(batch, lang);
+        
+        setTranslatedData(prev => {
+          const next = { ...prev };
+          batch.forEach((original, idx) => {
+            next[original] = results[idx];
+          });
+          return next;
+        });
+      }
+    }
+
     fetchAll()
-  }, [documents, t])
+  }, [documents, t, i18n.language])
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
@@ -655,7 +707,12 @@ function ActionsSection({ documents }) {
         </thead>
         <tbody>
           {actions.map((a, i) => (
-            <ActionTableRow key={a.action_id || i} a={a} />
+            <ActionTableRow 
+              key={a.action_id || i} 
+              a={a} 
+              translations={translatedData}
+              lang={i18n.language}
+            />
           ))}
         </tbody>
       </table>
@@ -663,22 +720,30 @@ function ActionsSection({ documents }) {
   )
 }
 
-function ActionTableRow({ a }) {
+function ActionTableRow({ a, translations, lang }) {
   const { t } = useTranslation()
   const tc = ACTION_TYPE_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
-  const translatedText = useTranslate(a.action_text, { dynamic: true })
-  const translatedType = useTranslate(a.action_type?.replace('_', ' '), { dynamic: true })
-  const translatedDept = useTranslate(a.department, { dynamic: true })
+  
+  const getTranslated = (text) => {
+    if (!text || lang === 'en') return text;
+    if (translations[text]) return translations[text];
+    
+    // Check global cache as well (fallback if parent state hasn't updated yet)
+    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}");
+    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`];
+
+    return t('common.translating', 'Translating...');
+  }
 
   return (
     <tr className={styles.tr}>
-      <td className={styles.actionText}>{translatedText}</td>
+      <td className={styles.actionText}>{getTranslated(a.action_text)}</td>
       <td>
         <span className={styles.badge} style={{ background: tc.bg, color: tc.text }}>
-          {translatedType}
+          {getTranslated(a.action_type?.replace('_', ' '))}
         </span>
       </td>
-      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td className={styles.muted}>{getTranslated(a.department) || '—'}</td>
       <td><code className={styles.code}>{a.clause_id}</code></td>
       <td><StatusBadge status={a.status} /></td>
       <td className={styles.muted}>
@@ -689,10 +754,11 @@ function ActionTableRow({ a }) {
 }
 
 function MappingsSection({ documents }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [mappings, setMappings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [translatedData, setTranslatedData] = useState({})
 
   useEffect(() => {
     if (!documents.length) { setLoading(false); return }
@@ -712,14 +778,60 @@ function MappingsSection({ documents }) {
         )
         const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
         setMappings(all)
+        setLoading(false)
+
+        if (i18n.language !== 'en') {
+          translateAll(all, i18n.language)
+        }
       } catch (err) {
         setError(`${t('dashboard.failedToLoadMappingData')}: ${err.message}`)
-      } finally {
         setLoading(false)
       }
     }
+
+    const translateAll = async (items, lang) => {
+      const textsToTranslate = items.flatMap(m => [
+        m.mapped_policy,
+        m.department,
+        m.reasoning
+      ]).filter(Boolean);
+
+      const uniqueTexts = [...new Set(textsToTranslate)];
+      
+      // Filter out what's already in the local cache to avoid redundant calls
+      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}");
+      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`]);
+
+      // Immediately set cached values to state
+      const initialResults = {};
+      uniqueTexts.forEach(text => {
+        if (cachedData[`${lang}_${text}`]) {
+          initialResults[text] = cachedData[`${lang}_${text}`];
+        }
+      });
+      if (Object.keys(initialResults).length > 0) {
+        setTranslatedData(prev => ({ ...prev, ...initialResults }));
+      }
+
+      if (neededTexts.length === 0) return;
+
+      const batchSize = 5;
+      for (let i = 0; i < neededTexts.length; i += batchSize) {
+        const batch = neededTexts.slice(i, i + batchSize);
+        const results = await TranslationService.translateBatch(batch, lang);
+        
+        setTranslatedData(prev => {
+          const next = { ...prev };
+          batch.forEach((original, idx) => {
+            next[original] = results[idx];
+          });
+          return next;
+        });
+      }
+    }
+
     fetchAll()
-  }, [documents, t])
+  }, [documents, t, i18n.language])
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
@@ -741,7 +853,12 @@ function MappingsSection({ documents }) {
         </thead>
         <tbody>
           {mappings.map((m, i) => (
-            <MappingTableRow key={m.clause_id || i} m={m} />
+            <MappingTableRow 
+              key={m.clause_id || i} 
+              m={m} 
+              translations={translatedData}
+              lang={i18n.language}
+            />
           ))}
         </tbody>
       </table>
@@ -749,19 +866,28 @@ function MappingsSection({ documents }) {
   )
 }
 
-function MappingTableRow({ m }) {
+function MappingTableRow({ m, translations, lang }) {
   const { t } = useTranslation()
-  const translatedPolicy = useTranslate(m.mapped_policy, { dynamic: true })
-  const translatedDept = useTranslate(m.department, { dynamic: true })
-  const translatedReasoning = useTranslate(m.reasoning, { dynamic: true })
+  
+  const getTranslated = (text) => {
+    if (!text || lang === 'en') return text;
+    if (translations[text]) return translations[text];
+
+    // Check global cache as well (fallback if parent state hasn't updated yet)
+    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}");
+    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`];
+
+    return t('common.translating', 'Translating...');
+  }
+
   const gapKey = m.gap_detected ? 'gapDetected' : 'noGap'
   const translatedGap = t(`common.${gapKey}`)
 
   return (
     <tr className={styles.tr}>
       <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
-      <td className={styles.policyName}>{translatedPolicy || '—'}</td>
-      <td className={styles.muted}>{translatedDept || '—'}</td>
+      <td className={styles.policyName}>{getTranslated(m.mapped_policy) || '—'}</td>
+      <td className={styles.muted}>{getTranslated(m.department) || '—'}</td>
       <td>
         <span className={styles.badge} style={
           m.gap_detected
@@ -786,7 +912,7 @@ function MappingTableRow({ m }) {
       </td>
       <td><StatusBadge status={m.mapping_status || m.status || 'unknown'} /></td>
       <td className={styles.muted} style={{ maxWidth: '200px', fontSize: '0.72rem' }}>
-        {translatedReasoning || '—'}
+        {getTranslated(m.reasoning) || '—'}
       </td>
     </tr>
   )

@@ -197,7 +197,9 @@ def explain_document_risk(
 
     for clause in clauses:
         score = clause_score_by_id.get(clause.get("clause_id"))
-        explanation = explain_clause_risk(clause, score) if score else explain_clause_risk(clause)
+        # Only pass score if it's a valid dict with the 'score' key
+        has_valid_score = score and isinstance(score, dict) and "score" in score
+        explanation = explain_clause_risk(clause, score) if has_valid_score else explain_clause_risk(clause)
         clause_explanations.append({
             **explanation,
             "text": clause.get("text", ""),

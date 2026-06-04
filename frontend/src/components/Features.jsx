@@ -37,6 +37,39 @@ const features = [
     title: 'Automated Action Generation',
     body: 'High-priority clauses trigger the generation of first-draft compliance artefacts: policy revisions, control adjustments, and audit checklists. Every artefact includes a full traceability chain linking it back to the originating regulatory clause.',
     tag: 'features.actions',
+    titleKey: 'features.items.monitoring.title',
+    bodyKey: 'features.items.monitoring.body',
+    tagKey: 'features.monitoring',
+  },
+  {
+    id: '02',
+    titleKey: 'features.items.extraction.title',
+    bodyKey: 'features.items.extraction.body',
+    tagKey: 'features.extraction',
+  },
+  {
+    id: '03',
+    titleKey: 'features.items.graphDb.title',
+    bodyKey: 'features.items.graphDb.body',
+    tagKey: 'features.graphDb',
+  },
+  {
+    id: '04',
+    titleKey: 'features.items.rag.title',
+    bodyKey: 'features.items.rag.body',
+    tagKey: 'features.rag',
+  },
+  {
+    id: '05',
+    titleKey: 'features.items.riskEngine.title',
+    bodyKey: 'features.items.riskEngine.body',
+    tagKey: 'features.riskEngine',
+  },
+  {
+    id: '06',
+    titleKey: 'features.items.actions.title',
+    bodyKey: 'features.items.actions.body',
+    tagKey: 'features.actions',
   },
 ]
 
@@ -63,6 +96,10 @@ export default function Features() {
               </div>
               <h3 className={styles.title}>{t(f.title)}</h3>
               <p className={styles.body}>{t(f.body)}</p>
+                <span className={styles.tag}>{t(f.tagKey)}</span>
+              </div>
+              <h3 className={styles.title}>{t(f.titleKey)}</h3>
+              <p className={styles.body}>{t(f.bodyKey)}</p>
             </div>
           ))}
         </div>

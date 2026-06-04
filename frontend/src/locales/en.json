@@ -67,7 +67,33 @@
     "graphDb": "Graph DB",
     "rag": "RAG",
     "riskEngine": "Risk Engine",
-    "actions": "Actions"
+    "actions": "Actions",
+    "items": {
+      "monitoring": {
+        "title": "Continuous Regulatory Monitoring",
+        "body": "Web crawlers and RSS/API feed parsers continuously scan government portals, financial regulators, and official legal bulletins. Change-detection algorithms flag new or amended publications and route them to the extraction pipeline within hours."
+      },
+      "extraction": {
+        "title": "LLM-Based Clause Extraction",
+        "body": "Documents are pre-processed through tokenisation and section segmentation, then passed to a fine-tuned GPT-4 class or Legal-BERT model that identifies and classifies obligations, prohibitions, permissions, deadlines, and conditional requirements at 90%+ precision."
+      },
+      "graphDb": {
+        "title": "Knowledge Graph Construction",
+        "body": "Extracted clauses are represented as structured nodes within a Neo4j graph database. Edges encode relationships between regulatory clauses, internal policy documents, process controls, responsible departments, and affected IT systems."
+      },
+      "rag": {
+        "title": "RAG-Augmented Policy Mapping",
+        "body": "A Retrieval-Augmented Generation layer allows the LLM to query the knowledge graph during gap analysis, combining graph traversal and semantic vector search to identify policy coverage gaps and map obligations to responsible owners."
+      },
+      "riskEngine": {
+        "title": "Multi-Criteria Risk Scoring",
+        "body": "Each regulatory clause is scored across severity of non-compliance, breadth of organisational impact, deadline proximity, and enforcement likelihood. SHAP-based explanations surface the scoring rationale to compliance officers for transparency."
+      },
+      "actions": {
+        "title": "Automated Action Generation",
+        "body": "High-priority clauses trigger the generation of first-draft compliance artefacts: policy revisions, control adjustments, and audit checklists. Every artefact includes a full traceability chain linking it back to the originating regulatory clause."
+      }
+    }
   },
   "architecture": {
     "systemDesign": "System Design",
@@ -387,6 +413,7 @@
     "gapDetected": "Gap Detected",
     "noGap": "No Gap",
     "retry": "Retry",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "translating": "Translating..."
   }
 }

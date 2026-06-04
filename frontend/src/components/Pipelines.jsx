@@ -31,7 +31,6 @@ const pipelinesData = [
       { method: 'POST', path: '/risk/analyze' },
       { method: 'POST', path: '/actions/generate' },
       { method: 'GET', path: '/dashboard/{doc_id}' },
-      { method: 'GET', path: '/risk/explain/{doc_id}', desc: 'Read-only risk rationale, evidence, and clause-level explanations' },
     ],
   },
 ]
@@ -97,7 +96,7 @@ export default function Pipelines() {
                     <code className={styles.path}>{e.path}</code>
                   </div>
                   <p className={styles.endpointDesc}>
-                    {endpointDescriptions[i]?.desc || e.desc || ''}
+                    {endpointDescriptions[i]?.desc || ''}
                   </p>
                 </div>
               ))}

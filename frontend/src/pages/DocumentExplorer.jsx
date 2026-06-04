@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './DocumentExplorer.module.css'
-import Translate from '../components/Translate'
 import useTranslate from '../hooks/useTranslate'
 
 const BASE_URL = 'http://localhost:5000/db'
@@ -80,7 +79,8 @@ function Loader() {
 
 function EmptyState({ message, i18nKey }) {
   const { t } = useTranslation()
-  const translatedMessage = i18nKey ? t(i18nKey) : useTranslate(message, { dynamic: true })
+  const dynamicMessage = useTranslate(message, { dynamic: true })
+  const translatedMessage = i18nKey ? t(i18nKey) : dynamicMessage
   return <div className={styles.empty}>{translatedMessage}</div>
 }
 
@@ -102,7 +102,6 @@ function SectionBlock({ title, children, count, i18nTitle }) {
 // ── Document detail sections ─────────────────────────────
 
 function DocMeta({ doc, context }) {
-  const { t } = useTranslation()
   const fields = [
     { label: 'explorer.documentId',   value: doc.doc_id },
     { label: 'explorer.sourceId',     value: doc.source_id },
@@ -166,56 +165,8 @@ function KeywordItem({ k }) {
   return <span className={styles.keyword}>{translatedKeyword}</span>
 }
 
-import TranslationService from '../services/TranslationService'
-
-// ── Document detail sections ─────────────────────────────
-
 function ClausesTable({ clauses }) {
-  const { t, i18n } = useTranslation()
-  const [translatedData, setTranslatedData] = useState({})
-  
-  useEffect(() => {
-    if (!clauses.length || i18n.language === 'en') return
-
-    const translateAll = async (items, lang) => {
-      const textsToTranslate = items.flatMap(c => [
-        c.text,
-        c.deadline
-      ]).filter(Boolean)
-
-      const uniqueTexts = [...new Set(textsToTranslate)]
-      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
-
-      const initialResults = {}
-      uniqueTexts.forEach(text => {
-        if (cachedData[`${lang}_${text}`]) {
-          initialResults[text] = cachedData[`${lang}_${text}`]
-        }
-      })
-      if (Object.keys(initialResults).length > 0) {
-        setTranslatedData(prev => ({ ...prev, ...initialResults }))
-      }
-
-      if (neededTexts.length === 0) return
-
-      const batchSize = 5
-      for (let i = 0; i < neededTexts.length; i += batchSize) {
-        const batch = neededTexts.slice(i, i + batchSize)
-        const results = await TranslationService.translateBatch(batch, lang)
-        setTranslatedData(prev => {
-          const next = { ...prev }
-          batch.forEach((original, idx) => {
-            next[original] = results[idx]
-          })
-          return next
-        })
-      }
-    }
-
-    translateAll(clauses, i18n.language)
-  }, [clauses, i18n.language])
-
+  const { t } = useTranslation()
   if (!clauses.length) return <EmptyState i18nKey="explorer.noClausesFound" message="No clauses found for this document." />
 
   const TYPE_COLOR = {
@@ -238,13 +189,7 @@ function ClausesTable({ clauses }) {
         </thead>
         <tbody>
           {clauses.map((c, i) => (
-            <ClauseTableRow 
-              key={c.clause_id || i} 
-              c={c} 
-              typeColor={TYPE_COLOR} 
-              translations={translatedData}
-              lang={i18n.language}
-            />
+            <ClauseTableRow key={c.clause_id || i} c={c} typeColor={TYPE_COLOR} />
           ))}
         </tbody>
       </table>
@@ -252,19 +197,13 @@ function ClausesTable({ clauses }) {
   )
 }
 
-function ClauseTableRow({ c, typeColor, translations, lang }) {
+function ClauseTableRow({ c, typeColor }) {
   const { t } = useTranslation()
   const tc = typeColor[c.type] || { bg: '#f0ede8', text: '#4a4a4a' }
   const translatedType = t(`explorer.types.${c.type}`, c.type)
+  const translatedText = useTranslate(c.text, { dynamic: true })
+  const translatedDeadline = useTranslate(c.deadline, { dynamic: true })
   
-  const getTranslated = (text) => {
-    if (!text || lang === 'en') return text
-    if (translations[text]) return translations[text]
-    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
-    return t('common.translating', 'Translating...')
-  }
-
   return (
     <tr className={styles.tr}>
       <td><code className={styles.code}>{c.clause_id}</code></td>
@@ -272,8 +211,8 @@ function ClauseTableRow({ c, typeColor, translations, lang }) {
         <Badge label={translatedType || '—'}
           style={{ background: tc.bg, color: tc.text }} />
       </td>
-      <td className={styles.clauseText}>{getTranslated(c.text)}</td>
-      <td className={styles.muted}>{getTranslated(c.deadline) || '—'}</td>
+      <td className={styles.clauseText}>{translatedText}</td>
+      <td className={styles.muted}>{translatedDeadline || '—'}</td>
       <td>
         <ScoreBar value={c.extraction_confidence}
           color={
@@ -288,52 +227,7 @@ function ClauseTableRow({ c, typeColor, translations, lang }) {
 }
 
 function MappingsTable({ mappings }) {
-  const { t, i18n } = useTranslation()
-  const [translatedData, setTranslatedData] = useState({})
-
-  useEffect(() => {
-    if (!mappings.length || i18n.language === 'en') return
-
-    const translateAll = async (items, lang) => {
-      const textsToTranslate = items.flatMap(m => [
-        m.mapped_policy,
-        m.department,
-        m.reasoning
-      ]).filter(Boolean)
-
-      const uniqueTexts = [...new Set(textsToTranslate)]
-      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
-
-      const initialResults = {}
-      uniqueTexts.forEach(text => {
-        if (cachedData[`${lang}_${text}`]) {
-          initialResults[text] = cachedData[`${lang}_${text}`]
-        }
-      })
-      if (Object.keys(initialResults).length > 0) {
-        setTranslatedData(prev => ({ ...prev, ...initialResults }))
-      }
-
-      if (neededTexts.length === 0) return
-
-      const batchSize = 5
-      for (let i = 0; i < neededTexts.length; i += batchSize) {
-        const batch = neededTexts.slice(i, i + batchSize)
-        const results = await TranslationService.translateBatch(batch, lang)
-        setTranslatedData(prev => {
-          const next = { ...prev }
-          batch.forEach((original, idx) => {
-            next[original] = results[idx]
-          })
-          return next
-        })
-      }
-    }
-
-    translateAll(mappings, i18n.language)
-  }, [mappings, i18n.language])
-
+  const { t } = useTranslation()
   if (!mappings.length) return <EmptyState i18nKey="explorer.noMappingsFound" message="No policy mappings found. Run Pipeline 2 for this document." />
 
   return (
@@ -352,12 +246,7 @@ function MappingsTable({ mappings }) {
         </thead>
         <tbody>
           {mappings.map((m, i) => (
-            <MappingTableRow 
-              key={m.clause_id || i} 
-              m={m} 
-              translations={translatedData}
-              lang={i18n.language}
-            />
+            <MappingTableRow key={m.clause_id || i} m={m} />
           ))}
         </tbody>
       </table>
@@ -365,25 +254,19 @@ function MappingsTable({ mappings }) {
   )
 }
 
-function MappingTableRow({ m, translations, lang }) {
+function MappingTableRow({ m }) {
   const { t } = useTranslation()
-
-  const getTranslated = (text) => {
-    if (!text || lang === 'en') return text
-    if (translations[text]) return translations[text]
-    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
-    return t('common.translating', 'Translating...')
-  }
-
+  const translatedPolicy = useTranslate(m.mapped_policy, { dynamic: true })
+  const translatedDept = useTranslate(m.department, { dynamic: true })
+  const translatedReasoning = useTranslate(m.reasoning, { dynamic: true })
   const gapKey = m.gap_detected ? 'gapDetected' : 'noGap'
   const translatedGapLabel = t(`common.${gapKey}`)
 
   return (
     <tr className={styles.tr}>
       <td><code className={styles.code}>{m.clause_id || '—'}</code></td>
-      <td className={styles.policyName}>{getTranslated(m.mapped_policy) || '—'}</td>
-      <td className={styles.muted}>{getTranslated(m.department) || '—'}</td>
+      <td className={styles.policyName}>{translatedPolicy || '—'}</td>
+      <td className={styles.muted}>{translatedDept || '—'}</td>
       <td>
         <Badge
           label={translatedGapLabel}
@@ -394,7 +277,7 @@ function MappingTableRow({ m, translations, lang }) {
       </td>
       <td><ScoreBar value={m.mapping_confidence} color="#1a3a5c" /></td>
       <td><StatusBadge status={m.mapping_status || m.status} /></td>
-      <td className={`${styles.muted} ${styles.reasoning}`}>{getTranslated(m.reasoning) || '—'}</td>
+      <td className={`${styles.muted} ${styles.reasoning}`}>{translatedReasoning || '—'}</td>
     </tr>
   )
 }
@@ -499,54 +382,102 @@ function RiskTableRow({ r, riskColor }) {
   )
 }
 
+function ExplainabilityPanel({ explainability }) {
+  const { t } = useTranslation()
+
+  if (!explainability) {
+    return <EmptyState message="No explainability data found. Run Pipeline 3 for this document." />
+  }
+
+  const summary = explainability.summary || {}
+  const clauseExplanations = summary.clause_explanations || []
+  const mode = explainability.mode || 'deterministic'
+  const shap = explainability.shap || { available: false }
+
+  return (
+    <div className={styles.riskPanelWrap}>
+      <div className={styles.docRiskCard}>
+        <p className={styles.docRiskLabel}>Explainability summary</p>
+        <div className={styles.docRiskScores}>
+          <div className={styles.docRiskMain}>
+            <p className={styles.bigScore} style={{ color: '#1a3a5c' }}>
+              {summary.highest_risk_clause?.risk_score !== undefined
+                ? parseFloat(summary.highest_risk_clause.risk_score).toFixed(2)
+                : '—'}
+            </p>
+            <p className={styles.bigScoreLabel}>
+              {summary.highest_risk_clause?.clause_id || 'Top risk clause'}
+            </p>
+            <PriorityBadge priority={summary.highest_risk_clause?.priority || 'low'} />
+          </div>
+          <div className={styles.docRiskBreakdown}>
+            <p className={styles.breakdownNote}>Mode: {mode}</p>
+            <p className={styles.breakdownNote}>
+              SHAP: {shap.available ? 'Enabled' : `Not enabled${shap.reason ? ` (${shap.reason})` : ''}`}
+            </p>
+            <p className={styles.breakdownNote}>{summary.summary || 'No summary available.'}</p>
+            {[
+              { label: 'Score method', value: summary.score_method || 'max_clause_score' },
+              { label: 'Gap clauses', value: summary.gap_clauses ?? 0 },
+              { label: 'Dominant factor', value: summary.dominant_factor || '—' },
+              { label: 'Recommended actions', value: summary.actions_count ?? 0 },
+            ].map(item => (
+              <div key={item.label} className={styles.breakdownItem}>
+                <p className={styles.breakdownLabel}>{item.label}</p>
+                <p className={styles.breakdownNote}>{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {clauseExplanations.length > 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t('dashboard.table.clause')}</th>
+                <th>{t('dashboard.table.riskScore')}</th>
+                <th>{t('dashboard.table.priority')}</th>
+                <th>Driver</th>
+                <th>Evidence</th>
+                <th>Explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clauseExplanations.map((c, i) => (
+                <tr className={styles.tr} key={c.clause_id || i}>
+                  <td><code className={styles.code}>{c.clause_id}</code></td>
+                  <td><ScoreBar value={c.risk_score} color={parseFloat(c.risk_score) > 0.7 ? '#e74c3c' : parseFloat(c.risk_score) > 0.3 ? '#f39c12' : '#27ae60'} /></td>
+                  <td><PriorityBadge priority={c.priority} /></td>
+                  <td className={styles.muted}>{c.dominant_factor}</td>
+                  <td className={styles.muted}>
+                    Gap: {c.evidence?.gap_detected ? 'Yes' : 'No'}<br />
+                    Confidence: {c.evidence?.mapping_confidence ?? '—'}<br />
+                    Deadline: {c.evidence?.deadline || '—'}
+                  </td>
+                  <td className={`${styles.muted} ${styles.reasoning}`}>{c.explanation}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── REFACTORED ACTIONS TABLE WITH HOLISTIC APPROVAL-ONLY GATE + MULTI-LINGUAL PLUMBING ──
 function ActionsTable({ actions }) {
-  const { t, i18n } = useTranslation()
-  const [translatedData, setTranslatedData] = useState({})
+  const { t } = useTranslation()
+  const [localActions, setLocalActions] = useState(actions)
+  const [updatingId, setUpdatingId] = useState(null)
 
   useEffect(() => {
-    if (!actions.length || i18n.language === 'en') return
+    setLocalActions(actions)
+  }, [actions])
 
-    const translateAll = async (items, lang) => {
-      const textsToTranslate = items.flatMap(a => [
-        a.action_text,
-        a.action_type?.replace('_', ' '),
-        a.department
-      ]).filter(Boolean)
-
-      const uniqueTexts = [...new Set(textsToTranslate)]
-      const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-      const neededTexts = uniqueTexts.filter(text => !cachedData[`${lang}_${text}`])
-
-      const initialResults = {}
-      uniqueTexts.forEach(text => {
-        if (cachedData[`${lang}_${text}`]) {
-          initialResults[text] = cachedData[`${lang}_${text}`]
-        }
-      })
-      if (Object.keys(initialResults).length > 0) {
-        setTranslatedData(prev => ({ ...prev, ...initialResults }))
-      }
-
-      if (neededTexts.length === 0) return
-
-      const batchSize = 5
-      for (let i = 0; i < neededTexts.length; i += batchSize) {
-        const batch = neededTexts.slice(i, i + batchSize)
-        const results = await TranslationService.translateBatch(batch, lang)
-        setTranslatedData(prev => {
-          const next = { ...prev }
-          batch.forEach((original, idx) => {
-            next[original] = results[idx]
-          })
-          return next
-        })
-      }
-    }
-
-    translateAll(actions, i18n.language)
-  }, [actions, i18n.language])
-
-  if (!actions.length)
+  if (!localActions.length)
     return <EmptyState i18nKey="explorer.noActionsGenerated" message="No actions generated yet. Run Pipeline 3 for this document." />
 
   const ACTION_COLOR = {
@@ -554,6 +485,29 @@ function ActionsTable({ actions }) {
     alert:         { bg: '#fdecea', text: '#c0392b' },
     audit:         { bg: '#fff3d9', text: '#8a5a00' },
     checklist:     { bg: '#e8f5e9', text: '#256029' },
+  }
+
+  const handleUpdateStatus = async (actionId, newStatus) => {
+    setUpdatingId(actionId)
+    try {
+      const res = await fetch(`${BASE_URL}/actions/${actionId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (res.ok) {
+        setLocalActions(prev =>
+          prev.map(a => (a.action_id === actionId ? { ...a, status: newStatus } : a))
+        )
+      } else {
+        alert('Failed to update action status on the serverless gateway.')
+      }
+    } catch (err) {
+      console.error('Error executing human decision over row entity:', err)
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   return (
@@ -566,53 +520,68 @@ function ActionsTable({ actions }) {
             <th>{t('dashboard.table.department')}</th>
             <th>{t('dashboard.table.clause')}</th>
             <th>{t('dashboard.table.status')}</th>
-            <th>{t('dashboard.table.generated')}</th>
+            <th>{t('dashboard.table.governanceVerificationGate', 'Governance Verification Gate')}</th>
           </tr>
         </thead>
         <tbody>
-          {actions.map((a, i) => (
-            <ActionTableRow 
-              key={a.action_id || i} 
-              a={a} 
-              actionColor={ACTION_COLOR} 
-              translations={translatedData}
-              lang={i18n.language}
-            />
-          ))}
+          {localActions.map((a, i) => {
+            const tc = ACTION_COLOR[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
+            const currentStatus = a.status?.toLowerCase() || 'pending'
+            const isPending = currentStatus === 'pending' || currentStatus === 'in_progress'
+
+            // Multi-lingual translation triggers for dynamic API values
+            const translatedText = useTranslate(a.action_text, { dynamic: true })
+            const translatedType = useTranslate(a.action_type?.replace('_', ' '), { dynamic: true })
+            const translatedDept = useTranslate(a.department, { dynamic: true })
+
+            return (
+              <tr key={a.action_id || i} className={styles.tr}>
+                <td className={styles.actionText}>{translatedText}</td>
+                <td>
+                  <Badge
+                    label={translatedType || '—'}
+                    style={{ background: tc.bg, color: tc.text }}
+                  />
+                </td>
+                <td className={styles.muted}>{translatedDept || '—'}</td>
+                <td><code className={styles.code}>{a.clause_id}</code></td>
+                <td><StatusBadge status={currentStatus} /></td>
+                <td>
+                  {isPending ? (
+                    <button
+                      onClick={() => handleUpdateStatus(a.action_id, 'completed')}
+                      disabled={updatingId !== null}
+                      style={{
+                        background: '#e8f5e9',
+                        color: '#256029',
+                        border: '1px solid #27ae60',
+                        padding: '6px 14px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = '#d4edda' }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = '#e8f5e9' }}
+                    >
+                      {t('common.approveAction', '✓ Approve Action')}
+                    </button>
+                  ) : (
+                    <span style={{ color: '#27ae60', fontSize: '0.8rem', fontStyle: 'italic', fontWeight: '600' }}>
+                      {t('common.verifiedActive', '✓ Verified & Active')}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
-  )
-}
-
-function ActionTableRow({ a, actionColor, translations, lang }) {
-  const { t } = useTranslation()
-  const tc = actionColor[a.action_type] || { bg: '#f0ede8', text: '#4a4a4a' }
-  
-  const getTranslated = (text) => {
-    if (!text || lang === 'en') return text
-    if (translations[text]) return translations[text]
-    const cachedData = JSON.parse(localStorage.getItem("dynamic_translation_cache") || "{}")
-    if (cachedData[`${lang}_${text}`]) return cachedData[`${lang}_${text}`]
-    return t('common.translating', 'Translating...')
-  }
-
-  return (
-    <tr className={styles.tr}>
-      <td className={styles.actionText}>{getTranslated(a.action_text)}</td>
-      <td>
-        <Badge
-          label={getTranslated(a.action_type?.replace('_', ' ')) || '—'}
-          style={{ background: tc.bg, color: tc.text }}
-        />
-      </td>
-      <td className={styles.muted}>{getTranslated(a.department) || '—'}</td>
-      <td><code className={styles.code}>{a.clause_id}</code></td>
-      <td><StatusBadge status={a.status} /></td>
-      <td className={styles.muted}>
-        {a.generated_at ? new Date(a.generated_at).toLocaleString() : '—'}
-      </td>
-    </tr>
   )
 }
 
@@ -623,9 +592,6 @@ function FullTextPanel({ text, visible }) {
   
   if (!text) return <EmptyState i18nKey="explorer.noDocumentText" message="No document text available." />
 
-  // If not expanded, we don't need to translate the full text, 
-  // but we might want a translated preview. 
-  // However, the requirement is to minimize tokens.
   const content = translatedText || text
   const preview = content.slice(0, 800)
   const hasMore = content.length > 800
@@ -699,6 +665,7 @@ function DocumentDetail({ doc, onBack }) {
     { id: 'clauses',   label: t('explorer.tabs.clauses'), count: data?.clauses.length },
     { id: 'mappings',  label: t('explorer.tabs.mappings'), count: data?.mappings.length },
     { id: 'risk',      label: t('explorer.tabs.risk') },
+    { id: 'explainability', label: 'Explainability', count: data?.explainability?.summary?.clause_explanations?.length },
     { id: 'actions',   label: t('explorer.tabs.actions'), count: data?.actions.length },
     { id: 'fulltext',  label: t('explorer.tabs.fulltext') },
   ]
@@ -731,8 +698,8 @@ function DocumentDetail({ doc, onBack }) {
               { label: t('explorer.quickStats.clauses'),        value: data.clauses.length },
               { label: t('explorer.quickStats.mappings'),       value: data.mappings.length },
               { label: t('explorer.quickStats.actions'),        value: data.actions.length },
-              { label: t('explorer.quickStats.clauseRisks'),   value: data.clauseRisks.length },
-              { label: t('explorer.quickStats.overallRisk'),   value: data.docRisk ? parseFloat(data.docRisk.risk_score).toFixed(2) : '—' },
+              { label: t('explorer.quickStats.clauseRisks'),    value: data.clauseRisks.length },
+              { label: t('explorer.quickStats.overallRisk'),    value: data.docRisk ? parseFloat(data.docRisk.risk_score).toFixed(2) : '—' },
               { label: t('explorer.quickStats.priority'),       value: data.docRisk
                   ? <PriorityBadge priority={data.docRisk.priority} />
                   : '—'

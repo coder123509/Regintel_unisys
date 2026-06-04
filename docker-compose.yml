@@ -45,17 +45,23 @@ services:
 
   # ── Pipeline 2 ──────────────────────────────────────────────────
 
+  # ── Pipeline 2 ──────────────────────────────────────────────────
+
   pipeline-2:
     build: ./backend/pipeline-2
     container_name: regintel-p2
     ports:
       - "8002:8002"
+    # ADD THESE TWO LINES HERE:
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      NEO4J_URI: ${NEO4J_URI}
-      NEO4J_USER: ${NEO4J_USER}
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
-      DB_SERVICE_URL: http://database-service:5000
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USER=${NEO4J_USER}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - DB_SERVICE_URL=http://database-service:5000
     volumes:
       - p2_chromadb:/app/compliance_db
       - p2_local_model:/app/local_model

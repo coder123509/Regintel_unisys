@@ -16,7 +16,7 @@ router.post('/', async (req, res, next) => {
 // GET /db/documents (metadata only)
 router.get('/', async (req, res, next) => {
     try {
-        const { status, limit = 10, offset = 0 } = req.query;
+        const { status, limit = 65, offset = 0 } = req.query;
         const data = await documentsService.getDocuments({ status, limit, offset });
         res.json(data);
     } catch (err) {
